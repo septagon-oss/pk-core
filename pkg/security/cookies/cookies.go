@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -54,22 +55,56 @@ const (
 // callers may use errors.Is to detect it.
 var ErrUnknownKind = errors.New("cookies: unknown kind")
 
-// profile is the per-Kind security posture. Fields here are the
+// ErrKindNameTaken indicates RegisterKind was called with a profile.Name that
+// is already registered.
+var ErrKindNameTaken = errors.New("cookie kind name already registered")
+
+var registrationMu sync.Mutex
+
+// RegisterKind allocates a new Kind value at runtime for downstream packages
+// to add their own cookie purposes (OAuth state, magic-link sessions, etc.).
+// Returns ErrKindNameTaken if profile.Name conflicts with an existing Kind.
+// Must be called at process startup before any Build/Write/Clear/Name calls
+// against the returned Kind.
+func RegisterKind(profile Profile) (Kind, error) {
+	if profile.Name == "" {
+		return 0, errors.New("cookies.RegisterKind: profile.Name must not be empty")
+	}
+	registrationMu.Lock()
+	defer registrationMu.Unlock()
+	for _, p := range kindProfiles {
+		if p.Name == profile.Name {
+			return 0, fmt.Errorf("cookies.RegisterKind: %w: %q", ErrKindNameTaken, profile.Name)
+		}
+	}
+	next := Kind(len(kindProfiles) + 1)
+	for {
+		if _, exists := kindProfiles[next]; !exists {
+			break
+		}
+		next++
+	}
+	kindProfiles[next] = profile
+	return next, nil
+}
+
+// Profile is the per-Kind security posture. Fields here are the
 // "fixed by the package" portion; callers contribute Value and
 // (optionally) MaxAge through Build's parameters and Options.
-type profile struct {
+type Profile struct {
 	Name     string
 	HttpOnly bool
 	SameSite http.SameSite
 	Path     string
 	// DefaultMaxAge picks up its value from the active Settings struct
 	// rather than being baked into the table — see resolveMaxAge.
+	DefaultMaxAge time.Duration
 }
 
 // kindProfiles is the single source of truth for cookie security settings.
 // New cookie purposes are added here, not at call sites. The table is read
 // after construction and never mutated, so concurrent access is safe.
-var kindProfiles = map[Kind]profile{
+var kindProfiles = map[Kind]Profile{
 	KindSession: {
 		Name:     "session",
 		HttpOnly: true,
@@ -193,13 +228,12 @@ func Build(r *http.Request, kind Kind, value string, opts ...Option) (*http.Cook
 // cookie (MaxAge=-1, value=""). Path and Domain match the profile so the
 // browser's match for deletion succeeds.
 func BuildClear(r *http.Request, kind Kind) (*http.Cookie, error) {
-	cookie, err := Build(r, kind, "", WithMaxAge(-time.Second))
+	cookie, err := Build(r, kind, "")
 	if err != nil {
 		return nil, err
 	}
-	// Set MaxAge=-1 explicitly so the rendered Set-Cookie header carries
-	// Max-Age=0 / Expires in the past regardless of WithMaxAge math.
 	cookie.MaxAge = -1
+	cookie.Expires = time.Unix(1, 0)
 	return cookie, nil
 }
 

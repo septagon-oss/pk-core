@@ -36,6 +36,15 @@
 // cookies package is the only path the platform sanctions for persisting
 // authentication material in a browser.
 //
+// # Why Option is closed
+//
+// Option is intentionally typed func(*option) (private) rather than
+// func(*http.Cookie). This prevents call-site Options from overriding the
+// per-Kind security profile (HttpOnly, SameSite, Path) that the whole
+// package exists to centralize. Downstream packages that need new behavior
+// add new Kinds via RegisterKind; they do not override existing Kind
+// profiles via Options.
+//
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
 package cookies

@@ -1,4 +1,4 @@
-// Package cookies — cookies_test.go is the contract test suite for the
+// Package cookies_test — cookies_test.go is the contract test suite for the
 // cookies package. Each test exercises one observable property of the
 // composable contract: profile fidelity, Secure-flag derivation, clearing
 // semantics, error sentinels, override behavior, name round-trip, and
@@ -6,7 +6,7 @@
 //
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
-package cookies
+package cookies_test
 
 import (
 	"crypto/tls"
@@ -16,13 +16,15 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/septagon-oss/pk-core/pkg/security/cookies"
 )
 
 // resetSettings clears any package-level Settings between tests. Without
 // it, a Configure call in one test leaks into another.
 func resetSettings(t *testing.T) {
 	t.Helper()
-	Configure(Settings{})
+	cookies.Configure(cookies.Settings{})
 }
 
 func TestBuildSession(t *testing.T) {
@@ -30,7 +32,7 @@ func TestBuildSession(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
 	r.TLS = &tls.ConnectionState{}
 
-	c, err := Build(r, KindSession, "tok")
+	c, err := cookies.Build(r, cookies.KindSession, "tok")
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -52,15 +54,15 @@ func TestBuildSession(t *testing.T) {
 	if c.Path != "/" {
 		t.Errorf("Path = %q, want %q", c.Path, "/")
 	}
-	if c.MaxAge != int(DefaultSessionMaxAge.Seconds()) {
-		t.Errorf("MaxAge = %d, want %d", c.MaxAge, int(DefaultSessionMaxAge.Seconds()))
+	if c.MaxAge != int(cookies.DefaultSessionMaxAge.Seconds()) {
+		t.Errorf("MaxAge = %d, want %d", c.MaxAge, int(cookies.DefaultSessionMaxAge.Seconds()))
 	}
 }
 
 func TestBuildCSRFIsNotHttpOnly(t *testing.T) {
 	resetSettings(t)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	c, err := Build(r, KindCSRF, "csrf-tok")
+	c, err := cookies.Build(r, cookies.KindCSRF, "csrf-tok")
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -79,7 +81,7 @@ func TestSecureDerivedFromTLS(t *testing.T) {
 	resetSettings(t)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
 	r.TLS = &tls.ConnectionState{}
-	c, err := Build(r, KindSession, "v")
+	c, err := cookies.Build(r, cookies.KindSession, "v")
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -92,7 +94,7 @@ func TestSecureDerivedFromForwardedProto(t *testing.T) {
 	resetSettings(t)
 	r := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
 	r.Header.Set("X-Forwarded-Proto", "https")
-	c, err := Build(r, KindSession, "v")
+	c, err := cookies.Build(r, cookies.KindSession, "v")
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -103,11 +105,11 @@ func TestSecureDerivedFromForwardedProto(t *testing.T) {
 
 func TestForceSecureOverride(t *testing.T) {
 	resetSettings(t)
-	Configure(Settings{ForceSecure: true})
+	cookies.Configure(cookies.Settings{ForceSecure: true})
 	t.Cleanup(func() { resetSettings(t) })
 
 	r := httptest.NewRequest(http.MethodGet, "http://example.com/", nil)
-	c, err := Build(r, KindSession, "v")
+	c, err := cookies.Build(r, cookies.KindSession, "v")
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -118,10 +120,10 @@ func TestForceSecureOverride(t *testing.T) {
 
 func TestForceSecureWithNilRequest(t *testing.T) {
 	resetSettings(t)
-	Configure(Settings{ForceSecure: true})
+	cookies.Configure(cookies.Settings{ForceSecure: true})
 	t.Cleanup(func() { resetSettings(t) })
 
-	c, err := Build(nil, KindSession, "v")
+	c, err := cookies.Build(nil, cookies.KindSession, "v")
 	if err != nil {
 		t.Fatalf("Build(nil): %v", err)
 	}
@@ -133,7 +135,7 @@ func TestForceSecureWithNilRequest(t *testing.T) {
 func TestBuildClearSetsMaxAgeNegative(t *testing.T) {
 	resetSettings(t)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	c, err := BuildClear(r, KindSession)
+	c, err := cookies.BuildClear(r, cookies.KindSession)
 	if err != nil {
 		t.Fatalf("BuildClear: %v", err)
 	}
@@ -150,19 +152,19 @@ func TestBuildClearSetsMaxAgeNegative(t *testing.T) {
 
 func TestBuildUnknownKindErrors(t *testing.T) {
 	resetSettings(t)
-	_, err := Build(nil, Kind(999), "v")
+	_, err := cookies.Build(nil, cookies.Kind(999), "v")
 	if err == nil {
 		t.Fatal("Build(unknown): err = nil, want ErrUnknownKind")
 	}
-	if !errors.Is(err, ErrUnknownKind) {
+	if !errors.Is(err, cookies.ErrUnknownKind) {
 		t.Errorf("err = %v, want errors.Is(err, ErrUnknownKind) == true", err)
 	}
 }
 
 func TestBuildClearUnknownKindErrors(t *testing.T) {
 	resetSettings(t)
-	_, err := BuildClear(nil, Kind(999))
-	if !errors.Is(err, ErrUnknownKind) {
+	_, err := cookies.BuildClear(nil, cookies.Kind(999))
+	if !errors.Is(err, cookies.ErrUnknownKind) {
 		t.Errorf("err = %v, want ErrUnknownKind", err)
 	}
 }
@@ -171,8 +173,8 @@ func TestBuildZeroKindErrors(t *testing.T) {
 	resetSettings(t)
 	// The zero-value Kind has no profile and must error rather than ship
 	// a default-but-incorrect profile.
-	var k Kind
-	if _, err := Build(nil, k, "v"); !errors.Is(err, ErrUnknownKind) {
+	var k cookies.Kind
+	if _, err := cookies.Build(nil, k, "v"); !errors.Is(err, cookies.ErrUnknownKind) {
 		t.Errorf("zero Kind err = %v, want ErrUnknownKind", err)
 	}
 }
@@ -180,7 +182,7 @@ func TestBuildZeroKindErrors(t *testing.T) {
 func TestWithMaxAgeOverride(t *testing.T) {
 	resetSettings(t)
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	c, err := Build(r, KindSession, "v", WithMaxAge(10*time.Minute))
+	c, err := cookies.Build(r, cookies.KindSession, "v", cookies.WithMaxAge(10*time.Minute))
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -191,14 +193,14 @@ func TestWithMaxAgeOverride(t *testing.T) {
 
 func TestNameRoundTrip(t *testing.T) {
 	resetSettings(t)
-	cases := map[Kind]string{
-		KindSession:        "session",
-		KindCSRF:           "_csrf",
-		KindPreviewSession: "preview_session",
-		KindTenantPin:      "tenant_id",
+	cases := map[cookies.Kind]string{
+		cookies.KindSession:        "session",
+		cookies.KindCSRF:           "_csrf",
+		cookies.KindPreviewSession: "preview_session",
+		cookies.KindTenantPin:      "tenant_id",
 	}
 	for k, want := range cases {
-		got, err := Name(k)
+		got, err := cookies.Name(k)
 		if err != nil {
 			t.Errorf("Name(%d): %v", k, err)
 			continue
@@ -207,7 +209,7 @@ func TestNameRoundTrip(t *testing.T) {
 			t.Errorf("Name(%d) = %q, want %q", k, got, want)
 		}
 	}
-	if _, err := Name(Kind(999)); !errors.Is(err, ErrUnknownKind) {
+	if _, err := cookies.Name(cookies.Kind(999)); !errors.Is(err, cookies.ErrUnknownKind) {
 		t.Errorf("Name(unknown) err = %v, want ErrUnknownKind", err)
 	}
 }
@@ -216,12 +218,12 @@ func TestWriteEmitsHeader(t *testing.T) {
 	resetSettings(t)
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	if err := Write(rec, r, KindSession, "v"); err != nil {
+	if err := cookies.Write(rec, r, cookies.KindSession, "v"); err != nil {
 		t.Fatalf("Write: %v", err)
 	}
-	cookies := rec.Result().Cookies()
-	if len(cookies) != 1 || cookies[0].Name != "session" || cookies[0].Value != "v" {
-		t.Errorf("emitted cookies = %+v, want one session=v cookie", cookies)
+	c := rec.Result().Cookies()
+	if len(c) != 1 || c[0].Name != "session" || c[0].Value != "v" {
+		t.Errorf("emitted cookies = %+v, want one session=v cookie", c)
 	}
 }
 
@@ -229,8 +231,8 @@ func TestWriteUnknownKindReturnsError(t *testing.T) {
 	resetSettings(t)
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	err := Write(rec, r, Kind(999), "v")
-	if !errors.Is(err, ErrUnknownKind) {
+	err := cookies.Write(rec, r, cookies.Kind(999), "v")
+	if !errors.Is(err, cookies.ErrUnknownKind) {
 		t.Errorf("Write(unknown) err = %v, want ErrUnknownKind", err)
 	}
 	if len(rec.Result().Cookies()) != 0 {
@@ -242,25 +244,25 @@ func TestClearEmitsExpiringHeader(t *testing.T) {
 	resetSettings(t)
 	rec := httptest.NewRecorder()
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	if err := Clear(rec, r, KindSession); err != nil {
+	if err := cookies.Clear(rec, r, cookies.KindSession); err != nil {
 		t.Fatalf("Clear: %v", err)
 	}
-	cookies := rec.Result().Cookies()
-	if len(cookies) != 1 {
-		t.Fatalf("got %d cookies, want 1", len(cookies))
+	c := rec.Result().Cookies()
+	if len(c) != 1 {
+		t.Fatalf("got %d cookies, want 1", len(c))
 	}
-	if cookies[0].MaxAge != -1 {
-		t.Errorf("MaxAge = %d, want -1", cookies[0].MaxAge)
+	if c[0].MaxAge != -1 {
+		t.Errorf("MaxAge = %d, want -1", c[0].MaxAge)
 	}
 }
 
 func TestSettingsDomainPropagates(t *testing.T) {
 	resetSettings(t)
-	Configure(Settings{CookieDomain: "example.com"})
+	cookies.Configure(cookies.Settings{CookieDomain: "example.com"})
 	t.Cleanup(func() { resetSettings(t) })
 
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	c, err := Build(r, KindSession, "v")
+	c, err := cookies.Build(r, cookies.KindSession, "v")
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -271,11 +273,11 @@ func TestSettingsDomainPropagates(t *testing.T) {
 
 func TestSettingsMaxAgeOverridesDefault(t *testing.T) {
 	resetSettings(t)
-	Configure(Settings{SessionMaxAge: 5 * time.Minute})
+	cookies.Configure(cookies.Settings{SessionMaxAge: 5 * time.Minute})
 	t.Cleanup(func() { resetSettings(t) })
 
 	r := httptest.NewRequest(http.MethodGet, "https://example.com/", nil)
-	c, err := Build(r, KindSession, "v")
+	c, err := cookies.Build(r, cookies.KindSession, "v")
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -306,7 +308,7 @@ func TestConfigureIsRaceFree(t *testing.T) {
 					return
 				default:
 				}
-				Configure(Settings{
+				cookies.Configure(cookies.Settings{
 					ForceSecure:   i%2 == 0,
 					SessionMaxAge: time.Duration(i+1) * time.Minute,
 				})
@@ -319,7 +321,7 @@ func TestConfigureIsRaceFree(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < 5000; j++ {
-				c, err := Build(r, KindSession, "v")
+				c, err := cookies.Build(r, cookies.KindSession, "v")
 				if err != nil {
 					t.Errorf("Build: %v", err)
 					return
@@ -334,4 +336,60 @@ func TestConfigureIsRaceFree(t *testing.T) {
 	time.Sleep(20 * time.Millisecond)
 	close(stop)
 	wg.Wait()
+}
+
+func TestRegisterKindAllocatesNewKind(t *testing.T) {
+	t.Parallel()
+	profile := cookies.Profile{
+		Name:          "test_oauth_state_xyz",
+		HttpOnly:      true,
+		SameSite:      http.SameSiteLaxMode,
+		Path:          "/",
+		DefaultMaxAge: 10 * time.Minute,
+	}
+	kind, err := cookies.RegisterKind(profile)
+	if err != nil {
+		t.Fatalf("RegisterKind: %v", err)
+	}
+	name, err := cookies.Name(kind)
+	if err != nil {
+		t.Fatalf("Name(%d): %v", kind, err)
+	}
+	if name != "test_oauth_state_xyz" {
+		t.Fatalf("Name = %q, want %q", name, "test_oauth_state_xyz")
+	}
+	r := httptest.NewRequest(http.MethodGet, "/", nil)
+	c, err := cookies.Build(r, kind, "x")
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if !c.HttpOnly {
+		t.Fatal("custom Kind should honor profile.HttpOnly")
+	}
+}
+
+func TestRegisterKindRejectsDuplicateName(t *testing.T) {
+	t.Parallel()
+	profile := cookies.Profile{
+		Name:          "test_duplicate_check",
+		HttpOnly:      true,
+		SameSite:      http.SameSiteStrictMode,
+		Path:          "/",
+		DefaultMaxAge: time.Minute,
+	}
+	if _, err := cookies.RegisterKind(profile); err != nil {
+		t.Fatalf("first registration: %v", err)
+	}
+	if _, err := cookies.RegisterKind(profile); err == nil {
+		t.Fatal("expected ErrKindNameTaken on duplicate")
+	} else if !errors.Is(err, cookies.ErrKindNameTaken) {
+		t.Fatalf("err = %v, want ErrKindNameTaken", err)
+	}
+}
+
+func TestRegisterKindRejectsEmptyName(t *testing.T) {
+	t.Parallel()
+	if _, err := cookies.RegisterKind(cookies.Profile{}); err == nil {
+		t.Fatal("expected error on empty Name")
+	}
 }

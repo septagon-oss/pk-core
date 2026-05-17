@@ -1,12 +1,12 @@
-// Package signature — signature_test.go is the contract test suite for the
-// signature package. It exercises HMACSigner's round-trip, tampering
+// Package signature_test — signature_test.go is the contract test suite for
+// the signature package. It exercises HMACSigner's round-trip, tampering
 // rejection, malformed-input handling, defensive key copying, and the
 // short-key sentinel error. Tests use only stdlib and the package under
 // test so they have no external dependencies.
 //
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
-package signature
+package signature_test
 
 import (
 	"bytes"
@@ -14,11 +14,13 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/septagon-oss/pk-core/pkg/security/signature"
 )
 
 // goodKey returns a 32-byte key suitable for NewHMACSigner.
 func goodKey() []byte {
-	k := make([]byte, MinKeyLength)
+	k := make([]byte, signature.MinKeyLength)
 	for i := range k {
 		k[i] = byte(i)
 	}
@@ -26,23 +28,23 @@ func goodKey() []byte {
 }
 
 func TestNewHMACSignerRejectsShortKey(t *testing.T) {
-	for _, n := range []int{0, 1, 15, MinKeyLength - 1} {
+	for _, n := range []int{0, 1, 15, signature.MinKeyLength - 1} {
 		key := make([]byte, n)
-		_, err := NewHMACSigner(key)
+		_, err := signature.NewHMACSigner(key)
 		if err == nil {
 			t.Errorf("NewHMACSigner(len=%d): err = nil, want ErrShortKey", n)
 			continue
 		}
-		if !errors.Is(err, ErrShortKey) {
+		if !errors.Is(err, signature.ErrShortKey) {
 			t.Errorf("NewHMACSigner(len=%d): err = %v, want errors.Is(err, ErrShortKey) == true", n, err)
 		}
 	}
 }
 
 func TestNewHMACSignerAcceptsExactMinKey(t *testing.T) {
-	s, err := NewHMACSigner(make([]byte, MinKeyLength))
+	s, err := signature.NewHMACSigner(make([]byte, signature.MinKeyLength))
 	if err != nil {
-		t.Fatalf("NewHMACSigner(len=%d): %v", MinKeyLength, err)
+		t.Fatalf("NewHMACSigner(len=%d): %v", signature.MinKeyLength, err)
 	}
 	if s == nil {
 		t.Fatal("signer is nil")
@@ -50,7 +52,7 @@ func TestNewHMACSignerAcceptsExactMinKey(t *testing.T) {
 }
 
 func TestHMACSignerRoundTrip(t *testing.T) {
-	s, err := NewHMACSigner(goodKey())
+	s, err := signature.NewHMACSigner(goodKey())
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -65,7 +67,7 @@ func TestHMACSignerRoundTrip(t *testing.T) {
 }
 
 func TestHMACSignerIsDeterministic(t *testing.T) {
-	s, err := NewHMACSigner(goodKey())
+	s, err := signature.NewHMACSigner(goodKey())
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -77,7 +79,7 @@ func TestHMACSignerIsDeterministic(t *testing.T) {
 }
 
 func TestHMACSignerRejectsTamperedPayload(t *testing.T) {
-	s, err := NewHMACSigner(goodKey())
+	s, err := signature.NewHMACSigner(goodKey())
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -92,11 +94,11 @@ func TestHMACSignerRejectsWrongKey(t *testing.T) {
 	keyB := goodKey()
 	keyB[0] ^= 0xff
 
-	a, err := NewHMACSigner(keyA)
+	a, err := signature.NewHMACSigner(keyA)
 	if err != nil {
 		t.Fatalf("NewHMACSigner(A): %v", err)
 	}
-	b, err := NewHMACSigner(keyB)
+	b, err := signature.NewHMACSigner(keyB)
 	if err != nil {
 		t.Fatalf("NewHMACSigner(B): %v", err)
 	}
@@ -108,7 +110,7 @@ func TestHMACSignerRejectsWrongKey(t *testing.T) {
 }
 
 func TestHMACSignerRejectsMalformedSignature(t *testing.T) {
-	s, err := NewHMACSigner(goodKey())
+	s, err := signature.NewHMACSigner(goodKey())
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -135,7 +137,7 @@ func TestHMACSignerRejectsMalformedSignature(t *testing.T) {
 }
 
 func TestHMACSignerRejectsTruncatedSignature(t *testing.T) {
-	s, err := NewHMACSigner(goodKey())
+	s, err := signature.NewHMACSigner(goodKey())
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -152,7 +154,7 @@ func TestHMACSignerKeyIsDefensivelyCopied(t *testing.T) {
 	saved := make([]byte, len(key))
 	copy(saved, key)
 
-	s, err := NewHMACSigner(key)
+	s, err := signature.NewHMACSigner(key)
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -178,7 +180,7 @@ func TestHMACSignerKeyIsDefensivelyCopied(t *testing.T) {
 }
 
 func TestHMACSignerOutputIsHex(t *testing.T) {
-	s, err := NewHMACSigner(goodKey())
+	s, err := signature.NewHMACSigner(goodKey())
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -200,7 +202,7 @@ func TestHMACSignerOutputIsHex(t *testing.T) {
 // Verify on a single signer to exercise the documented "safe for
 // concurrent use" guarantee. Run with `go test -race`.
 func TestHMACSignerIsConcurrencySafe(t *testing.T) {
-	s, err := NewHMACSigner(goodKey())
+	s, err := signature.NewHMACSigner(goodKey())
 	if err != nil {
 		t.Fatalf("NewHMACSigner: %v", err)
 	}
@@ -226,6 +228,3 @@ func TestHMACSignerIsConcurrencySafe(t *testing.T) {
 	}
 	wg.Wait()
 }
-
-// Compile-time guarantee that HMACSigner satisfies Signer.
-var _ Signer = (*HMACSigner)(nil)

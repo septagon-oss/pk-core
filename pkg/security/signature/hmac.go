@@ -34,6 +34,8 @@ type HMACSigner struct {
 	key []byte
 }
 
+var _ Signer = (*HMACSigner)(nil)
+
 // NewHMACSigner constructs an HMACSigner. The key is copied defensively
 // so subsequent mutation of the caller's slice cannot tamper with the
 // signer's state. Returns ErrShortKey if key is shorter than MinKeyLength.
