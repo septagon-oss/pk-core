@@ -251,3 +251,7 @@ Before a new core API is accepted, it must answer these questions:
 
 If the answer is "this is only convenient implementation code", it does not
 belong in `pk-core`.
+
+Use [COMPOSABILITY_AUDIT.md](COMPOSABILITY_AUDIT.md) to score public blocks and
+decide whether they are release-grade composable blocks, reusable-only APIs, or
+implementation details.
