@@ -83,7 +83,6 @@ func TestWarnTrimsAndOmitsEmptyCode(t *testing.T) {
 		{"whitespace-padded mode trimmed", guardrail.Mode("  fallback  "), "x", 8, "fallback", "x"},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			log := &captureLogger{}
@@ -120,7 +119,6 @@ func TestShorthandHelpersUseCorrectMode(t *testing.T) {
 		{"soft_empty", func(ctx context.Context, l logger.Logger) { guardrail.WarnSoftEmpty(ctx, l, "c", "m") }, "soft_empty"},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			log := &captureLogger{}
