@@ -54,6 +54,7 @@ func TestPreflightReturns204WithAllowOrigin(t *testing.T) {
 	if got := rec.Header().Get("Access-Control-Max-Age"); got != "60" {
 		t.Errorf("Access-Control-Max-Age = %q, want 60", got)
 	}
+	requireVary(t, rec.Header(), "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers")
 }
 
 func TestSimpleRequestPassesThrough(t *testing.T) {
@@ -105,6 +106,7 @@ func TestPreflightRejectsDisallowedOrigin(t *testing.T) {
 	if got := rec.Header().Get("Access-Control-Allow-Methods"); got != "" {
 		t.Errorf("Access-Control-Allow-Methods should be empty for disallowed origin, got %q", got)
 	}
+	requireVary(t, rec.Header(), "Origin", "Access-Control-Request-Method", "Access-Control-Request-Headers")
 }
 
 func TestCredentialsHeaderOnlyWhenEnabled(t *testing.T) {
@@ -214,5 +216,15 @@ func TestNoOriginHeaderPassesThroughCleanly(t *testing.T) {
 	}
 	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "" {
 		t.Errorf("non-CORS request should not get Access-Control-Allow-Origin, got %q", got)
+	}
+}
+
+func requireVary(t *testing.T, h http.Header, want ...string) {
+	t.Helper()
+	values := strings.Join(h.Values("Vary"), ",")
+	for _, value := range want {
+		if !strings.Contains(values, value) {
+			t.Fatalf("Vary = %q, missing %q", values, value)
+		}
 	}
 }

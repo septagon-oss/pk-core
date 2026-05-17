@@ -57,12 +57,11 @@ var managedResponseHeaderNames = []string{
 // FrameOptions to DefaultFrameOptions, ReferrerPolicy to
 // DefaultReferrerPolicy, and ContentTypeOptions to true (emitting "nosniff").
 //
-// To omit a header entirely, set its field to the zero value semantically
-// associated with "off": HSTSMaxAge=-1 disables HSTS, FrameOptions=""
-// disables X-Frame-Options (only after merge resolution), ReferrerPolicy=""
-// disables Referrer-Policy, ContentTypeOptions=false disables nosniff,
-// PermissionsPolicy="" disables Permissions-Policy, and CSPDirectives
-// being empty disables Content-Security-Policy.
+// To omit a header entirely, set its documented opt-out value:
+// HSTSMaxAge=-1 disables HSTS, FrameOptions="-" disables X-Frame-Options,
+// ReferrerPolicy="-" disables Referrer-Policy, WithContentTypeOptions(...,
+// false) disables nosniff, PermissionsPolicy="" disables Permissions-Policy,
+// and an empty CSPDirectives map disables Content-Security-Policy.
 //
 // Pro/downstream packages extend the policy by supplying additional Configs
 // to Middleware; the variadic merge is the contribution mechanism.
@@ -206,7 +205,12 @@ func Middleware(cfgs ...Config) func(http.Handler) http.Handler {
 			if len(directiveKeys) > 0 {
 				nonce := ""
 				if cspNeedsNonce {
-					nonce = generateNonce()
+					generatedNonce, err := generateNonce()
+					if err != nil {
+						http.Error(w, "security headers: nonce generation failed", http.StatusInternalServerError)
+						return
+					}
+					nonce = generatedNonce
 					r = r.WithContext(context.WithValue(r.Context(), nonceContextKey{}, nonce))
 				}
 				h.Set(cspHeaderName, renderCSP(directiveKeys, effective.CSPDirectives, nonce))
@@ -325,8 +329,10 @@ func renderCSP(keys []string, directives map[string]string, nonce string) string
 
 // generateNonce returns a freshly generated 16-byte CSP nonce,
 // base64-RawURL-encoded for safe use inside CSP directive values.
-func generateNonce() string {
+func generateNonce() (string, error) {
 	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	return base64.RawURLEncoding.EncodeToString(b)
+	if _, err := rand.Read(b); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(b), nil
 }

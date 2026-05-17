@@ -113,6 +113,13 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 			isPreflight := r.Method == http.MethodOptions &&
 				r.Header.Get("Access-Control-Request-Method") != ""
 
+			if origin != "" {
+				addVary(w.Header(), "Origin")
+				if isPreflight {
+					addVary(w.Header(), "Access-Control-Request-Method", "Access-Control-Request-Headers")
+				}
+			}
+
 			if origin == "" || !matcher(origin) {
 				// Not CORS, or disallowed origin. Preflight still gets a
 				// 204 so the browser does not retry, but without any
@@ -128,7 +135,6 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 			h := w.Header()
 			h.Set("Access-Control-Allow-Origin", origin)
-			h.Add("Vary", "Origin")
 			if cfg.AllowCredentials {
 				h.Set("Access-Control-Allow-Credentials", "true")
 			}
@@ -148,5 +154,11 @@ func Middleware(cfg Config) func(http.Handler) http.Handler {
 
 			next.ServeHTTP(w, r)
 		})
+	}
+}
+
+func addVary(h http.Header, values ...string) {
+	for _, value := range values {
+		h.Add("Vary", value)
 	}
 }

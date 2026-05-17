@@ -11,14 +11,22 @@ package cookies_test
 import (
 	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/septagon-oss/pk-core/pkg/security/cookies"
 )
+
+var customKindSeq atomic.Uint64
+
+func uniqueCookieName(prefix string) string {
+	return fmt.Sprintf("test_%s_%d", prefix, customKindSeq.Add(1))
+}
 
 // resetSettings clears any package-level Settings between tests. Without
 // it, a Configure call in one test leaks into another.
@@ -340,8 +348,9 @@ func TestConfigureIsRaceFree(t *testing.T) {
 
 func TestRegisterKindAllocatesNewKind(t *testing.T) {
 	t.Parallel()
+	name := uniqueCookieName("oauth_state")
 	profile := cookies.Profile{
-		Name:          "test_oauth_state_xyz",
+		Name:          name,
 		HttpOnly:      true,
 		SameSite:      http.SameSiteLaxMode,
 		Path:          "/",
@@ -351,12 +360,12 @@ func TestRegisterKindAllocatesNewKind(t *testing.T) {
 	if err != nil {
 		t.Fatalf("RegisterKind: %v", err)
 	}
-	name, err := cookies.Name(kind)
+	registeredName, err := cookies.Name(kind)
 	if err != nil {
 		t.Fatalf("Name(%d): %v", kind, err)
 	}
-	if name != "test_oauth_state_xyz" {
-		t.Fatalf("Name = %q, want %q", name, "test_oauth_state_xyz")
+	if registeredName != profile.Name {
+		t.Fatalf("Name = %q, want %q", registeredName, profile.Name)
 	}
 	r := httptest.NewRequest(http.MethodGet, "/", nil)
 	c, err := cookies.Build(r, kind, "x")
@@ -366,12 +375,19 @@ func TestRegisterKindAllocatesNewKind(t *testing.T) {
 	if !c.HttpOnly {
 		t.Fatal("custom Kind should honor profile.HttpOnly")
 	}
+	if c.Path != "/" {
+		t.Fatalf("Path = %q, want /", c.Path)
+	}
+	if c.MaxAge != int((10 * time.Minute).Seconds()) {
+		t.Fatalf("MaxAge = %d, want 600", c.MaxAge)
+	}
 }
 
 func TestRegisterKindRejectsDuplicateName(t *testing.T) {
 	t.Parallel()
+	name := uniqueCookieName("duplicate_check")
 	profile := cookies.Profile{
-		Name:          "test_duplicate_check",
+		Name:          name,
 		HttpOnly:      true,
 		SameSite:      http.SameSiteStrictMode,
 		Path:          "/",
@@ -389,7 +405,77 @@ func TestRegisterKindRejectsDuplicateName(t *testing.T) {
 
 func TestRegisterKindRejectsEmptyName(t *testing.T) {
 	t.Parallel()
-	if _, err := cookies.RegisterKind(cookies.Profile{}); err == nil {
-		t.Fatal("expected error on empty Name")
+	if _, err := cookies.RegisterKind(cookies.Profile{}); !errors.Is(err, cookies.ErrInvalidProfile) {
+		t.Fatalf("err = %v, want ErrInvalidProfile", err)
 	}
+}
+
+func TestRegisterKindRejectsInvalidProfile(t *testing.T) {
+	t.Parallel()
+	cases := []cookies.Profile{
+		{Name: "has space", Path: "/"},
+		{Name: "has/slash", Path: "/"},
+		{Name: uniqueCookieName("relative_path"), Path: "relative"},
+		{Name: uniqueCookieName("bad_path"), Path: "/bad;path"},
+	}
+	for _, profile := range cases {
+		if _, err := cookies.RegisterKind(profile); !errors.Is(err, cookies.ErrInvalidProfile) {
+			t.Fatalf("RegisterKind(%+v) err = %v, want ErrInvalidProfile", profile, err)
+		}
+	}
+}
+
+func TestRegisterKindDefaultsEmptyPath(t *testing.T) {
+	t.Parallel()
+	name := uniqueCookieName("default_path")
+	kind, err := cookies.RegisterKind(cookies.Profile{
+		Name:          name,
+		HttpOnly:      true,
+		SameSite:      http.SameSiteLaxMode,
+		DefaultMaxAge: time.Minute,
+	})
+	if err != nil {
+		t.Fatalf("RegisterKind: %v", err)
+	}
+	c, err := cookies.Build(nil, kind, "value")
+	if err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if c.Path != "/" {
+		t.Fatalf("Path = %q, want /", c.Path)
+	}
+}
+
+func TestRegisterKindIsRaceFree(t *testing.T) {
+	t.Parallel()
+	var wg sync.WaitGroup
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			for j := 0; j < 50; j++ {
+				name := uniqueCookieName(fmt.Sprintf("race_%d_%d", i, j))
+				kind, err := cookies.RegisterKind(cookies.Profile{
+					Name:          name,
+					HttpOnly:      true,
+					SameSite:      http.SameSiteLaxMode,
+					Path:          "/",
+					DefaultMaxAge: time.Minute,
+				})
+				if err != nil {
+					t.Errorf("RegisterKind: %v", err)
+					return
+				}
+				if _, err := cookies.Build(nil, kind, "v"); err != nil {
+					t.Errorf("Build(custom): %v", err)
+					return
+				}
+				if _, err := cookies.Build(nil, cookies.KindSession, "v"); err != nil {
+					t.Errorf("Build(session): %v", err)
+					return
+				}
+			}
+		}(i)
+	}
+	wg.Wait()
 }

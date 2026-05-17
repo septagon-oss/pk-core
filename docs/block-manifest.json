@@ -100,6 +100,26 @@
         "pkg/observability/guardrail/guardrail_test.go",
         "pkg/observability/tracing/tracing_test.go"
       ]
+    },
+    {
+      "id": "pk-core.security",
+      "kind": "primitive",
+      "owner": "pk-core",
+      "version": "0.0.0",
+      "package": "github.com/septagon-oss/pk-core/pkg/security",
+      "status": "composable",
+      "contracts": ["CookieKind", "CookieProfile", "Hasher", "Signer", "HeadersMiddleware", "CORSMiddleware", "CSRFMiddleware"],
+      "compositionLaws": ["closure", "determinism", "substitution", "runtime binding", "fail closed"],
+      "extensionPoints": ["cookie kind registration", "password hashers", "payload signers", "security header policy", "origin allowlists", "CSRF exemptions"],
+      "evidence": [
+        "pkg/architecture/oss_deps_test.go",
+        "pkg/security/cookies/cookies_test.go",
+        "pkg/security/passhash/passhash_test.go",
+        "pkg/security/signature/signature_test.go",
+        "pkg/security/headers/headers_test.go",
+        "pkg/security/cors/cors_test.go",
+        "pkg/security/csrf/csrf_test.go"
+      ]
     }
   ]
 }

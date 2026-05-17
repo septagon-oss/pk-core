@@ -57,21 +57,36 @@ var ErrUnknownKind = errors.New("cookies: unknown kind")
 
 // ErrKindNameTaken indicates RegisterKind was called with a profile.Name that
 // is already registered.
-var ErrKindNameTaken = errors.New("cookie kind name already registered")
+var ErrKindNameTaken = errors.New("cookies: kind name already registered")
 
-var registrationMu sync.Mutex
+// ErrInvalidProfile indicates RegisterKind was called with a structurally
+// invalid Profile.
+var ErrInvalidProfile = errors.New("cookies: invalid profile")
+
+var profileMu sync.RWMutex
 
 // RegisterKind allocates a new Kind value at runtime for downstream packages
 // to add their own cookie purposes (OAuth state, magic-link sessions, etc.).
 // Returns ErrKindNameTaken if profile.Name conflicts with an existing Kind.
-// Must be called at process startup before any Build/Write/Clear/Name calls
-// against the returned Kind.
+// Safe to call concurrently with Build/Write/Clear/Name; registration still
+// belongs in startup/bootstrap code so the cookie surface is deterministic.
 func RegisterKind(profile Profile) (Kind, error) {
+	profile.Name = strings.TrimSpace(profile.Name)
 	if profile.Name == "" {
-		return 0, errors.New("cookies.RegisterKind: profile.Name must not be empty")
+		return 0, fmt.Errorf("%w: profile.Name must not be empty", ErrInvalidProfile)
 	}
-	registrationMu.Lock()
-	defer registrationMu.Unlock()
+	if !validCookieName(profile.Name) {
+		return 0, fmt.Errorf("%w: profile.Name %q is not a valid cookie name", ErrInvalidProfile, profile.Name)
+	}
+	if profile.Path == "" {
+		profile.Path = "/"
+	}
+	if !validCookiePath(profile.Path) {
+		return 0, fmt.Errorf("%w: profile.Path %q must be an absolute cookie path", ErrInvalidProfile, profile.Path)
+	}
+
+	profileMu.Lock()
+	defer profileMu.Unlock()
 	for _, p := range kindProfiles {
 		if p.Name == profile.Name {
 			return 0, fmt.Errorf("cookies.RegisterKind: %w: %q", ErrKindNameTaken, profile.Name)
@@ -96,14 +111,14 @@ type Profile struct {
 	HttpOnly bool
 	SameSite http.SameSite
 	Path     string
-	// DefaultMaxAge picks up its value from the active Settings struct
-	// rather than being baked into the table — see resolveMaxAge.
+	// DefaultMaxAge is used when Build receives no WithMaxAge override and
+	// the Kind has no Settings-backed lifetime.
 	DefaultMaxAge time.Duration
 }
 
 // kindProfiles is the single source of truth for cookie security settings.
-// New cookie purposes are added here, not at call sites. The table is read
-// after construction and never mutated, so concurrent access is safe.
+// Built-in cookie purposes are added here; downstream purposes go through
+// RegisterKind so profileMu keeps readers and writers race-free.
 var kindProfiles = map[Kind]Profile{
 	KindSession: {
 		Name:     "session",
@@ -196,7 +211,7 @@ func currentSettings() Settings {
 // flag and may be nil; in that case Secure is derived solely from
 // Settings.ForceSecure.
 func Build(r *http.Request, kind Kind, value string, opts ...Option) (*http.Cookie, error) {
-	p, ok := kindProfiles[kind]
+	p, ok := profileFor(kind)
 	if !ok {
 		return nil, fmt.Errorf("%w %d", ErrUnknownKind, int(kind))
 	}
@@ -218,7 +233,7 @@ func Build(r *http.Request, kind Kind, value string, opts ...Option) (*http.Cook
 	}
 	if o.maxAgeSet {
 		cookie.MaxAge = secondsOrZero(o.maxAge)
-	} else if d := resolveMaxAge(kind, s); d > 0 {
+	} else if d := resolveMaxAge(kind, p, s); d > 0 {
 		cookie.MaxAge = secondsOrZero(d)
 	}
 	return cookie, nil
@@ -262,14 +277,21 @@ func Clear(w http.ResponseWriter, r *http.Request, kind Kind) error {
 // that read cookies (rather than write them) use this so the read path
 // tracks any future deployment-time renaming applied to the write path.
 func Name(kind Kind) (string, error) {
-	p, ok := kindProfiles[kind]
+	p, ok := profileFor(kind)
 	if !ok {
 		return "", fmt.Errorf("%w %d", ErrUnknownKind, int(kind))
 	}
 	return p.Name, nil
 }
 
-func resolveMaxAge(kind Kind, s Settings) time.Duration {
+func profileFor(kind Kind) (Profile, bool) {
+	profileMu.RLock()
+	defer profileMu.RUnlock()
+	p, ok := kindProfiles[kind]
+	return p, ok
+}
+
+func resolveMaxAge(kind Kind, p Profile, s Settings) time.Duration {
 	switch kind {
 	case KindSession:
 		if s.SessionMaxAge > 0 {
@@ -292,7 +314,7 @@ func resolveMaxAge(kind Kind, s Settings) time.Duration {
 		}
 		return DefaultTenantPinMaxAge
 	default:
-		return 0
+		return p.DefaultMaxAge
 	}
 }
 
@@ -317,4 +339,34 @@ func secondsOrZero(d time.Duration) int {
 		return 0
 	}
 	return int(d.Seconds())
+}
+
+func validCookieName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if c <= 0x20 || c >= 0x7f {
+			return false
+		}
+		switch c {
+		case '(', ')', '<', '>', '@', ',', ';', ':', '\\', '"', '/', '[', ']', '?', '=', '{', '}':
+			return false
+		}
+	}
+	return true
+}
+
+func validCookiePath(path string) bool {
+	if !strings.HasPrefix(path, "/") {
+		return false
+	}
+	for i := 0; i < len(path); i++ {
+		c := path[i]
+		if c <= 0x20 || c >= 0x7f || c == ';' {
+			return false
+		}
+	}
+	return true
 }

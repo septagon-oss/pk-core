@@ -138,6 +138,16 @@ It includes `pkg/mutation`:
 - `mutation.RuleGate`
 - `mutation.NewCatalog`
 
+It includes provider-neutral `pkg/security` primitives:
+
+- `cookies.Build`, `cookies.Write`, `cookies.Clear`, and `cookies.RegisterKind`
+- `passhash.Hasher`, bcrypt, Argon2id, and short-secret hashing
+- `signature.Signer` and HMAC signing
+- `headers.Middleware` for response security headers and CSP nonces
+- `cors.Middleware` for allowlist-based browser origin policy
+- `csrf.Middleware` for double-submit CSRF validation through the canonical
+  CSRF cookie profile
+
 These packages are contracts, not product implementations. Concrete identity
 providers, repositories, admin screens, approval workflows, job runners, HTTP
 hosts, and client flows belong in modules, runtime packages, tools, testkits, or
