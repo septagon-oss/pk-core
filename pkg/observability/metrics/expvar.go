@@ -40,6 +40,13 @@ func (e *expvarMetrics) Gauge(name string, _ ...string) Gauge {
 	return &expvarGauge{f: e.float(name)}
 }
 
+// Histogram registers two expvar.Float keys: "<name>_sum" and "<name>_count".
+// Callers must NOT register a separate Counter/Gauge/Histogram under any of
+// "<name>", "<name>_sum", or "<name>_count" — the underlying expvar storage
+// is shared by metric name, and a collision corrupts both metrics silently.
+// This default is deliberately lean; collision detection lives in adapter
+// implementations (Prometheus, OpenTelemetry) where the metric type system
+// catches the mistake.
 func (e *expvarMetrics) Histogram(name string, _ ...string) Histogram {
 	mustName(name)
 	return &expvarHistogram{

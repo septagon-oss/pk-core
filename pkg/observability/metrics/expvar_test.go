@@ -16,7 +16,8 @@ import (
 
 func TestExpvarCounterIncrements(t *testing.T) {
 	t.Parallel()
-	m := metrics.NewExpvar(new(expvar.Map).Init())
+	mp := new(expvar.Map).Init()
+	m := metrics.NewExpvar(mp)
 	c := m.Counter("requests_total")
 	c.Add(1)
 	c.Add(2)
@@ -24,15 +25,48 @@ func TestExpvarCounterIncrements(t *testing.T) {
 	c2 := m.Counter("requests_total")
 	c2.Add(1)
 
-	if c == nil || c2 == nil {
-		t.Fatal("counter handles must not be nil")
+	got := mp.Get("requests_total").(*expvar.Float).Value()
+	if got != 4 {
+		t.Fatalf("requests_total = %v, want 4 (cache should share storage)", got)
 	}
 }
 
 func TestExpvarGaugeSets(t *testing.T) {
 	t.Parallel()
-	m := metrics.NewExpvar(new(expvar.Map).Init())
+	mp := new(expvar.Map).Init()
+	m := metrics.NewExpvar(mp)
 	g := m.Gauge("queue_depth")
 	g.Set(7)
 	g.Set(3)
+
+	got := mp.Get("queue_depth").(*expvar.Float).Value()
+	if got != 3 {
+		t.Fatalf("queue_depth = %v, want 3 (last Set wins)", got)
+	}
+}
+
+func TestExpvarHistogramSumAndCount(t *testing.T) {
+	t.Parallel()
+	mp := new(expvar.Map).Init()
+	m := metrics.NewExpvar(mp)
+	h := m.Histogram("latency_ms")
+	h.Observe(10)
+	h.Observe(20)
+	h.Observe(30)
+
+	sum, ok := mp.Get("latency_ms_sum").(*expvar.Float)
+	if !ok || sum == nil {
+		t.Fatalf("latency_ms_sum not registered as *expvar.Float")
+	}
+	if sum.Value() != 60 {
+		t.Fatalf("sum = %v, want 60", sum.Value())
+	}
+
+	count, ok := mp.Get("latency_ms_count").(*expvar.Float)
+	if !ok || count == nil {
+		t.Fatalf("latency_ms_count not registered as *expvar.Float")
+	}
+	if count.Value() != 3 {
+		t.Fatalf("count = %v, want 3", count.Value())
+	}
 }
