@@ -11,6 +11,10 @@
 // Aggregate status is the worst component status: any Unhealthy → Unhealthy;
 // otherwise any Degraded → Degraded; otherwise Healthy.
 //
+// The default registrar emits only Healthy or Unhealthy. Custom registrars or
+// adapter integrations may produce Degraded; the HTTP handler maps Healthy
+// and Degraded to 200 and Unhealthy to 503.
+//
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
 package health

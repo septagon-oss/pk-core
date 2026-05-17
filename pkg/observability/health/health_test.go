@@ -8,6 +8,7 @@ package health_test
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -57,6 +58,16 @@ func TestHTTPHandlerReturnsJSON(t *testing.T) {
 	if got := rec.Header().Get("Content-Type"); got != "application/json" {
 		t.Fatalf("Content-Type = %q", got)
 	}
+	var got health.Result
+	if err := json.NewDecoder(rec.Body).Decode(&got); err != nil {
+		t.Fatalf("decode body: %v", err)
+	}
+	if got.Status != health.StatusHealthy {
+		t.Fatalf("body.Status = %v, want Healthy", got.Status)
+	}
+	if len(got.Components) != 1 || got.Components[0].Name != "db" {
+		t.Fatalf("body.Components = %+v, want one entry named db", got.Components)
+	}
 }
 
 func TestHTTPHandlerReturns503WhenUnhealthy(t *testing.T) {
@@ -70,5 +81,69 @@ func TestHTTPHandlerReturns503WhenUnhealthy(t *testing.T) {
 
 	if rec.Code != http.StatusServiceUnavailable {
 		t.Fatalf("status = %d, want 503", rec.Code)
+	}
+}
+
+func TestRegistryRecoversFromPanickingChecker(t *testing.T) {
+	t.Parallel()
+	r := health.NewRegistry()
+	r.Register("ok", health.CheckerFunc(func(context.Context) error { return nil }))
+	r.Register("explodes", health.CheckerFunc(func(context.Context) error {
+		panic("boom")
+	}))
+
+	res := r.Check(context.Background())
+	if res.Status != health.StatusUnhealthy {
+		t.Fatalf("Status = %v, want Unhealthy after panic", res.Status)
+	}
+	if len(res.Components) != 2 {
+		t.Fatalf("Components len = %d, want 2", len(res.Components))
+	}
+	// Find the panicking component and verify its error message.
+	var found *health.ComponentResult
+	for i := range res.Components {
+		if res.Components[i].Name == "explodes" {
+			found = &res.Components[i]
+			break
+		}
+	}
+	if found == nil {
+		t.Fatal("explodes component missing from result")
+	}
+	if found.Status != health.StatusUnhealthy {
+		t.Fatalf("explodes.Status = %v, want Unhealthy", found.Status)
+	}
+	if found.Error == "" {
+		t.Fatal("explodes.Error should be set after panic")
+	}
+}
+
+func TestRegisterReplacesExistingByName(t *testing.T) {
+	t.Parallel()
+	r := health.NewRegistry()
+	r.Register("db", health.CheckerFunc(func(context.Context) error { return nil }))
+	r.Register("db", health.CheckerFunc(func(context.Context) error { return errors.New("now down") }))
+
+	res := r.Check(context.Background())
+	if len(res.Components) != 1 {
+		t.Fatalf("Components len = %d, want 1 (re-register should replace, not append)", len(res.Components))
+	}
+	if res.Components[0].Status != health.StatusUnhealthy {
+		t.Fatalf("Components[0].Status = %v, want Unhealthy (second registration should win)", res.Components[0].Status)
+	}
+}
+
+func TestEmptyRegistryReportsHealthy(t *testing.T) {
+	t.Parallel()
+	r := health.NewRegistry()
+	res := r.Check(context.Background())
+	if res.Status != health.StatusHealthy {
+		t.Fatalf("Status = %v, want Healthy for empty registry", res.Status)
+	}
+	if res.Components == nil {
+		t.Fatal("Components must be non-nil so JSON marshals as [] not null")
+	}
+	if len(res.Components) != 0 {
+		t.Fatalf("len(Components) = %d, want 0", len(res.Components))
 	}
 }

@@ -15,6 +15,12 @@ import (
 // Status is the aggregate or per-component health state.
 type Status string
 
+// Aggregate status values.
+//
+// The default registrar in this package emits only StatusHealthy and
+// StatusUnhealthy. StatusDegraded is reserved for custom registrars and
+// adapter implementations that distinguish partial-failure conditions; the
+// wire format is fixed in v0.0.0 so consumers can rely on it.
 const (
 	StatusHealthy   Status = "healthy"
 	StatusDegraded  Status = "degraded"

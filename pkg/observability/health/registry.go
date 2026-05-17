@@ -11,6 +11,7 @@ package health
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"sync"
 )
@@ -57,7 +58,7 @@ func (r *registry) Check(ctx context.Context) Result {
 	out := Result{Status: StatusHealthy, Components: make([]ComponentResult, 0, len(snapshot))}
 	for _, e := range snapshot {
 		cr := ComponentResult{Name: e.name, Status: StatusHealthy}
-		if err := e.checker.Check(ctx); err != nil {
+		if err := runChecker(ctx, e.checker); err != nil {
 			cr.Status = StatusUnhealthy
 			cr.Error = err.Error()
 			out.Status = StatusUnhealthy
@@ -71,11 +72,28 @@ func (r *registry) HTTPHandler() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 		res := r.Check(req.Context())
 		w.Header().Set("Content-Type", "application/json")
-		if res.Status == StatusUnhealthy {
+		switch res.Status {
+		case StatusUnhealthy:
 			w.WriteHeader(http.StatusServiceUnavailable)
-		} else {
+		case StatusDegraded:
+			// Degraded means the service is still reachable but partially
+			// impaired. Map to 200 so liveness/readiness probes keep the pod
+			// in service; clients can read res.Components for detail.
+			w.WriteHeader(http.StatusOK)
+		default:
 			w.WriteHeader(http.StatusOK)
 		}
 		_ = json.NewEncoder(w).Encode(res)
 	})
+}
+
+// runChecker invokes c with panic recovery so a single misbehaving checker
+// degrades only its own component instead of crashing the calling handler.
+func runChecker(ctx context.Context, c Checker) (err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = fmt.Errorf("checker panicked: %v", p)
+		}
+	}()
+	return c.Check(ctx)
 }
