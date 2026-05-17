@@ -50,9 +50,9 @@ func (s *ShortSecretHasher) Verify(secret, encoded string) error {
 	if err != nil {
 		return ErrMalformedHash
 	}
-	got, _ := s.Hash(secret)
-	gotBytes, _ := hex.DecodeString(got)
-	if subtle.ConstantTimeCompare(gotBytes, want) != 1 {
+	m := hmac.New(sha256.New, s.pepper)
+	m.Write([]byte(secret))
+	if subtle.ConstantTimeCompare(m.Sum(nil), want) != 1 {
 		return ErrMismatch
 	}
 	return nil

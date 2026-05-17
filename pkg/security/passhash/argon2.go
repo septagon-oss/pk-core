@@ -84,7 +84,15 @@ func (a *Argon2idHasher) Verify(secret, encoded string) error {
 		return ErrMalformedHash
 	}
 	var version int
-	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil || version != argon2.Version {
+	if _, err := fmt.Sscanf(parts[2], "v=%d", &version); err != nil {
+		return ErrMalformedHash
+	}
+	if version != argon2.Version {
+		return ErrMalformedHash
+	}
+	// Strict equality on the version segment guards against trailing-junk
+	// inputs like "v=19extra".
+	if parts[2] != fmt.Sprintf("v=%d", version) {
 		return ErrMalformedHash
 	}
 	var memory, iters uint32
@@ -92,12 +100,28 @@ func (a *Argon2idHasher) Verify(secret, encoded string) error {
 	if _, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &iters, &par); err != nil {
 		return ErrMalformedHash
 	}
+	// Strict equality on the param segment guards against trailing-junk
+	// inputs like "m=65536,t=3,p=4,extra".
+	if parts[3] != fmt.Sprintf("m=%d,t=%d,p=%d", memory, iters, par) {
+		return ErrMalformedHash
+	}
+	// Validate algorithm floors BEFORE invoking argon2.IDKey — out-of-range
+	// values crash IDKey rather than return an error.
+	if iters < 1 || par < 1 || memory < 8*uint32(par) {
+		return ErrMalformedHash
+	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return ErrMalformedHash
 	}
+	if len(salt) < 8 {
+		return ErrMalformedHash
+	}
 	want, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
+		return ErrMalformedHash
+	}
+	if len(want) < 16 {
 		return ErrMalformedHash
 	}
 	got := argon2.IDKey([]byte(secret), salt, iters, memory, par, uint32(len(want)))

@@ -47,7 +47,7 @@ func TestBcryptVerifyMismatchUsesSentinel(t *testing.T) {
 	}
 }
 
-func TestBcryptVerifyMalformedReturnsMismatchOpaque(t *testing.T) {
+func TestBcryptVerifyMalformedReturnsMalformedHash(t *testing.T) {
 	t.Parallel()
 	// Malformed hash should also surface as ErrMismatch from the auth boundary
 	// (we DO permit ErrMalformedHash for deliberate format checks elsewhere).

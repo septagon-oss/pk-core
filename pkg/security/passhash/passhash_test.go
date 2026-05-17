@@ -1,8 +1,10 @@
 package passhash_test
 
-// passhash_test.go validates the Hasher contract shared by all randomly
-// salted implementations (bcrypt, argon2id). The non-salted ShortSecret
-// hasher has its own contract test in short_secret_test.go.
+// passhash_test.go provides SaltedHasherContract, the shared TDD harness
+// reused by bcrypt_test.go and argon2_test.go to enforce the three behaviors
+// every randomly-salted Hasher must satisfy: round-trip match, wrong-secret
+// rejection, and per-call salt randomness. ShortSecretHasher is a
+// deterministic Hasher and has its own contract test in short_secret_test.go.
 //
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
