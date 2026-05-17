@@ -22,17 +22,12 @@ import (
 type Kind int
 
 const (
-	// kindInvalid is the zero value. Using it returns ErrUnknownKind so
-	// uninitialised Kind variables are caught at use rather than silently
-	// ship as an unintended-default profile.
-	kindInvalid Kind = iota
-
 	// KindSession is the long-lived session cookie that carries the access
 	// token (typically a JWT) to authenticated handlers. HttpOnly so JS
 	// cannot exfiltrate via XSS, SameSite=Lax so top-level GET navigations
 	// after OAuth callbacks still carry it, Path=/ so every route sees the
 	// same session.
-	KindSession
+	KindSession Kind = iota + 1
 
 	// KindCSRF is the double-submit token cookie. NOT HttpOnly because the
 	// frontend reads it via JS to mirror it into a header on state-changing
