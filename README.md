@@ -50,6 +50,8 @@ See [docs/OPEN_CORE.md](docs/OPEN_CORE.md) for the Pro extension boundary and
 [docs/COMPOSABILITY.md](docs/COMPOSABILITY.md) for the building-block model.
 Use [docs/COMPOSABILITY_AUDIT.md](docs/COMPOSABILITY_AUDIT.md) to audit whether
 a public block is actually composable.
+[docs/BLOCKS_AND_CHAINS.md](docs/BLOCKS_AND_CHAINS.md) explains the difference
+between composable product blocks and chainable runtime flows.
 
 ## Quickstart
 

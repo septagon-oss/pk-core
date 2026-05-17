@@ -208,5 +208,10 @@ For each candidate block, ask:
 8. What can replace it?
 9. How can Pro/community extend it without a fork?
 10. What tests and docs prove the answers?
+11. If it participates in runtime behavior, what typed chain links does it
+    provide or consume?
 
 If the answers are unclear, the block is not yet composable.
+
+See [BLOCKS_AND_CHAINS.md](BLOCKS_AND_CHAINS.md) for the companion chainability
+model.

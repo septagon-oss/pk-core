@@ -255,3 +255,7 @@ belong in `pk-core`.
 Use [COMPOSABILITY_AUDIT.md](COMPOSABILITY_AUDIT.md) to score public blocks and
 decide whether they are release-grade composable blocks, reusable-only APIs, or
 implementation details.
+
+See [BLOCKS_AND_CHAINS.md](BLOCKS_AND_CHAINS.md) for the companion model:
+composable blocks assemble the product graph, while chainable links execute
+typed runtime flows.
