@@ -89,6 +89,31 @@ func TestContextWithPrincipalRoundTrip(t *testing.T) {
 	}
 }
 
+func TestContextWithPrincipalOwnsScopes(t *testing.T) {
+	t.Parallel()
+
+	scopes := []string{"read"}
+	ctx := identity.ContextWithPrincipal(context.Background(), identity.Principal{
+		Subject: "user-42",
+		Scopes:  scopes,
+	})
+	scopes[0] = "write"
+
+	got := identity.PrincipalFromContext(ctx)
+	if !got.HasScope("read") {
+		t.Fatalf("stored principal lost original scope: %+v", got)
+	}
+	if got.HasScope("write") {
+		t.Fatalf("stored principal aliases caller-owned scope slice: %+v", got)
+	}
+
+	got.Scopes[0] = "mutated"
+	again := identity.PrincipalFromContext(ctx)
+	if !again.HasScope("read") {
+		t.Fatalf("PrincipalFromContext returned mutable stored slice: %+v", again)
+	}
+}
+
 func TestPrincipalFromContextReturnsAnonymousByDefault(t *testing.T) {
 	t.Parallel()
 

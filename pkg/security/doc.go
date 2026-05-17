@@ -4,9 +4,11 @@
 //   - passhash: password hashing (bcrypt, argon2id, short-secret pepper)
 //   - cookies:  per-purpose HTTP cookie security profiles
 //   - signature: HMAC payload signing
-//   - cors, csrf, headers: HTTP security middleware (Phase A.2b)
-//   - identity, ratelimit: request-scoped state (Phase A.2c)
-//   - authn, authz, middlewarepolicy: composition layer (Phase A.2d)
+//   - headers: response security headers and CSP nonce plumbing
+//   - cors: origin allowlist middleware
+//   - csrf: double-submit cookie validation
+//   - identity: request principal context and resolver chains
+//   - ratelimit: limiter contracts, token bucket, and HTTP middleware
 //
 // External deps used by this package are whitelisted in
 // pk-core/pkg/architecture/oss_deps_test.go. Pro/downstream adapters

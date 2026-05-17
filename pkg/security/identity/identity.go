@@ -11,6 +11,7 @@ package identity
 import (
 	"context"
 	"net/http"
+	"slices"
 )
 
 // AuthMethodAnonymous is the conventional AuthMethod label for unauthenticated
@@ -73,12 +74,16 @@ func (p Principal) HasScope(scope string) bool {
 	if scope == "" {
 		return false
 	}
-	for _, s := range p.Scopes {
-		if s == scope {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(p.Scopes, scope)
+}
+
+// Clone returns p with owned slice storage. Use it when moving Principal
+// values across trust or lifecycle boundaries (for example, context storage)
+// so later mutation of a caller-owned Scopes slice cannot alter the
+// request's authenticated identity.
+func (p Principal) Clone() Principal {
+	p.Scopes = slices.Clone(p.Scopes)
+	return p
 }
 
 // contextKey is unexported so other packages cannot stash arbitrary types
@@ -97,7 +102,7 @@ func ContextWithPrincipal(ctx context.Context, p Principal) context.Context {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	return context.WithValue(ctx, principalKey, p)
+	return context.WithValue(ctx, principalKey, p.Clone())
 }
 
 // PrincipalFromContext returns the Principal attached to ctx. If no
@@ -109,7 +114,7 @@ func PrincipalFromContext(ctx context.Context) Principal {
 		return Principal{}
 	}
 	if v, ok := ctx.Value(principalKey).(Principal); ok {
-		return v
+		return v.Clone()
 	}
 	return Principal{}
 }

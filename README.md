@@ -147,6 +147,10 @@ It includes provider-neutral `pkg/security` primitives:
 - `cors.Middleware` for allowlist-based browser origin policy
 - `csrf.Middleware` for double-submit CSRF validation through the canonical
   CSRF cookie profile
+- `identity.Principal`, `identity.IdentityResolver`, `identity.Chain`, and
+  `identity.Middleware` for provider-neutral request identity plumbing
+- `ratelimit.Limiter`, `ratelimit.TokenBucket`, and `ratelimit.Middleware`
+  for provider-neutral request throttling
 
 These packages are contracts, not product implementations. Concrete identity
 providers, repositories, admin screens, approval workflows, job runners, HTTP

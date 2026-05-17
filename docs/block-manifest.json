@@ -108,9 +108,9 @@
       "version": "0.0.0",
       "package": "github.com/septagon-oss/pk-core/pkg/security",
       "status": "composable",
-      "contracts": ["CookieKind", "CookieProfile", "Hasher", "Signer", "HeadersMiddleware", "CORSMiddleware", "CSRFMiddleware"],
+      "contracts": ["CookieKind", "CookieProfile", "Hasher", "Signer", "HeadersMiddleware", "CORSMiddleware", "CSRFMiddleware", "Principal", "IdentityResolver", "Limiter", "TokenBucket"],
       "compositionLaws": ["closure", "determinism", "substitution", "runtime binding", "fail closed"],
-      "extensionPoints": ["cookie kind registration", "password hashers", "payload signers", "security header policy", "origin allowlists", "CSRF exemptions"],
+      "extensionPoints": ["cookie kind registration", "password hashers", "payload signers", "security header policy", "origin allowlists", "CSRF exemptions", "identity resolver chains", "rate-limit keying and limiter implementations"],
       "evidence": [
         "pkg/architecture/oss_deps_test.go",
         "pkg/security/cookies/cookies_test.go",
@@ -118,7 +118,9 @@
         "pkg/security/signature/signature_test.go",
         "pkg/security/headers/headers_test.go",
         "pkg/security/cors/cors_test.go",
-        "pkg/security/csrf/csrf_test.go"
+        "pkg/security/csrf/csrf_test.go",
+        "pkg/security/identity/identity_test.go",
+        "pkg/security/ratelimit/ratelimit_test.go"
       ]
     }
   ]
