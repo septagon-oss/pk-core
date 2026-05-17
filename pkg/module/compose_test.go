@@ -22,6 +22,10 @@ type UserService interface {
 	Create(email string) error
 }
 
+type ContentService interface {
+	Render(slug string) (string, error)
+}
+
 type PaidBillingModule struct {
 	module.Module
 	Provider string
@@ -168,6 +172,39 @@ func TestSortDoesNotTurnOptionalIntegrationsIntoHardCycles(t *testing.T) {
 		t.Fatalf("Sort() error = %v", err)
 	}
 	if got := moduleIDs(sorted); !slices.Equal(got, []string{"audit", "user"}) {
+		t.Fatalf("module order = %v", got)
+	}
+}
+
+func TestSortUsesOneProviderPerRequiredPortToAvoidFalseCycles(t *testing.T) {
+	t.Parallel()
+
+	auditDecorated := module.Must(
+		module.Metadata{ID: "audit_a"},
+		module.WithProvides(module.Provide[AuditService]("1.0.0")),
+		module.WithDependencies(module.Require[ContentService](module.DependencySpec{
+			Version: "^1.0.0",
+			Purpose: "decorate audit events with rendered content",
+		})),
+	)
+	auditPrimary := module.Must(
+		module.Metadata{ID: "audit_b"},
+		module.WithProvides(module.Provide[AuditService]("1.0.0")),
+	)
+	content := module.Must(
+		module.Metadata{ID: "content"},
+		module.WithProvides(module.Provide[ContentService]("1.0.0")),
+		module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+			Version: "^1.0.0",
+			Purpose: "audit content changes",
+		})),
+	)
+
+	sorted, err := module.Sort([]module.Composable{content, auditDecorated, auditPrimary})
+	if err != nil {
+		t.Fatalf("Sort() error = %v", err)
+	}
+	if got := moduleIDs(sorted); !slices.Equal(got, []string{"audit_b", "content", "audit_a"}) {
 		t.Fatalf("module order = %v", got)
 	}
 }

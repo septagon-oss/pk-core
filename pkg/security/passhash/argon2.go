@@ -19,6 +19,14 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+const (
+	minArgon2idMemoryKiB   uint32 = 8 * 1024
+	minArgon2idIterations  uint32 = 1
+	minArgon2idParallelism uint8  = 1
+	minArgon2idSaltLength  uint32 = 8
+	minArgon2idKeyLength   uint32 = 16
+)
+
 // Argon2idParams configures the argon2id algorithm. Defaults are OWASP 2024+.
 type Argon2idParams struct {
 	Memory      uint32 // KiB
@@ -46,19 +54,19 @@ type Argon2idHasher struct {
 
 // NewArgon2id constructs an Argon2idHasher.
 func NewArgon2id(p Argon2idParams) (*Argon2idHasher, error) {
-	if p.Memory < 8*1024 {
+	if p.Memory < minArgon2idMemoryKiB {
 		return nil, fmt.Errorf("passhash.NewArgon2id: memory %d KiB below 8 MiB floor", p.Memory)
 	}
-	if p.Iterations < 1 {
+	if p.Iterations < minArgon2idIterations {
 		return nil, errors.New("passhash.NewArgon2id: iterations must be >= 1")
 	}
-	if p.Parallelism < 1 {
+	if p.Parallelism < minArgon2idParallelism {
 		return nil, errors.New("passhash.NewArgon2id: parallelism must be >= 1")
 	}
-	if p.SaltLength < 8 {
+	if p.SaltLength < minArgon2idSaltLength {
 		return nil, fmt.Errorf("passhash.NewArgon2id: saltLength %d below 8-byte floor", p.SaltLength)
 	}
-	if p.KeyLength < 16 {
+	if p.KeyLength < minArgon2idKeyLength {
 		return nil, fmt.Errorf("passhash.NewArgon2id: keyLength %d below 16-byte floor", p.KeyLength)
 	}
 	return &Argon2idHasher{params: p}, nil
@@ -105,23 +113,31 @@ func (a *Argon2idHasher) Verify(secret, encoded string) error {
 	if parts[3] != fmt.Sprintf("m=%d,t=%d,p=%d", memory, iters, par) {
 		return ErrMalformedHash
 	}
-	// Validate algorithm floors BEFORE invoking argon2.IDKey — out-of-range
-	// values crash IDKey rather than return an error.
-	if iters < 1 || par < 1 || memory < 8*uint32(par) {
+	// Validate algorithm floors and this hasher's resource policy BEFORE
+	// invoking argon2.IDKey. Out-of-range values can crash IDKey, and
+	// policy-exceeding values could turn verification into unbounded work.
+	if iters < minArgon2idIterations || par < minArgon2idParallelism || memory < minArgon2idMemoryKiB {
+		return ErrMalformedHash
+	}
+	if memory > a.params.Memory || iters > a.params.Iterations || par > a.params.Parallelism {
+		return ErrMalformedHash
+	}
+	if len(parts[4]) > base64.RawStdEncoding.EncodedLen(int(a.params.SaltLength)) ||
+		len(parts[5]) > base64.RawStdEncoding.EncodedLen(int(a.params.KeyLength)) {
 		return ErrMalformedHash
 	}
 	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return ErrMalformedHash
 	}
-	if len(salt) < 8 {
+	if len(salt) < int(minArgon2idSaltLength) || len(salt) > int(a.params.SaltLength) {
 		return ErrMalformedHash
 	}
 	want, err := base64.RawStdEncoding.DecodeString(parts[5])
 	if err != nil {
 		return ErrMalformedHash
 	}
-	if len(want) < 16 {
+	if len(want) < int(minArgon2idKeyLength) || len(want) > int(a.params.KeyLength) {
 		return ErrMalformedHash
 	}
 	got := argon2.IDKey([]byte(secret), salt, iters, memory, par, uint32(len(want)))

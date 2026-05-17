@@ -8,6 +8,7 @@ package module
 import (
 	"cmp"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 	"strings"
@@ -134,36 +135,14 @@ func Sort(modules []Composable) ([]Composable, error) {
 	if err != nil {
 		return nil, err
 	}
-	inDegree := map[string]int{}
-	dependents := map[string][]string{}
-	for id := range byID {
-		inDegree[id] = 0
+	choices, err := dependencyChoices(refs, providers, byID)
+	if err != nil {
+		return nil, err
 	}
-
-	for _, ref := range refs {
-		consumerID := ref.metadata.ID
-		for _, dep := range ref.module.Dependencies() {
-			if err := validateDependency(dep); err != nil {
-				return nil, fmt.Errorf("module %q declares invalid dependency: %w", consumerID, err)
-			}
-			if !dep.Required {
-				continue
-			}
-			compatible, err := compatibleProviders(providers[dep.Port.Name], dep.Port.Version)
-			if err != nil {
-				return nil, err
-			}
-			for _, providerID := range satisfyingProviders(compatible, dep) {
-				if providerID == consumerID {
-					continue
-				}
-				if _, selected := byID[providerID]; !selected {
-					continue
-				}
-				inDegree[consumerID]++
-				dependents[providerID] = append(dependents[providerID], consumerID)
-			}
-		}
+	moduleIDs := sortedModuleIDs(byID)
+	inDegree, dependents, ok := acyclicProviderSelection(moduleIDs, choices)
+	if !ok {
+		return nil, fmt.Errorf("module dependency cycle detected: %s", strings.Join(moduleIDs, ", "))
 	}
 
 	queue := []string{}
@@ -205,6 +184,11 @@ func Sort(modules []Composable) ([]Composable, error) {
 	return sorted, nil
 }
 
+type dependencyChoice struct {
+	consumerID  string
+	providerIDs []string
+}
+
 type moduleRef struct {
 	module   Composable
 	metadata Metadata
@@ -228,6 +212,126 @@ func normalizeModuleRefs(modules []Composable) ([]moduleRef, error) {
 		refs = append(refs, moduleRef{module: module, metadata: metadata})
 	}
 	return refs, nil
+}
+
+func dependencyChoices(refs []moduleRef, providers map[string][]providedPort, byID map[string]Composable) ([]dependencyChoice, error) {
+	choices := []dependencyChoice{}
+	for _, ref := range refs {
+		consumerID := ref.metadata.ID
+		for _, dep := range ref.module.Dependencies() {
+			if err := validateDependency(dep); err != nil {
+				return nil, fmt.Errorf("module %q declares invalid dependency: %w", consumerID, err)
+			}
+			if !dep.Required {
+				continue
+			}
+			compatible, err := compatibleProviders(providers[dep.Port.Name], dep.Port.Version)
+			if err != nil {
+				return nil, err
+			}
+			satisfying := satisfyingProviders(compatible, dep)
+			selected := make([]string, 0, len(satisfying))
+			for _, providerID := range satisfying {
+				if providerID == consumerID {
+					continue
+				}
+				if _, ok := byID[providerID]; ok {
+					selected = append(selected, providerID)
+				}
+			}
+			if len(selected) > 0 {
+				choices = append(choices, dependencyChoice{consumerID: consumerID, providerIDs: selected})
+			}
+		}
+	}
+	return choices, nil
+}
+
+// acyclicProviderSelection treats compatible providers as OR edges: each
+// required dependency needs one selected provider, not every compatible provider.
+// Backtracking preserves preference order while pruning assignments that already
+// form a cycle.
+func acyclicProviderSelection(moduleIDs []string, choices []dependencyChoice) (map[string]int, map[string][]string, bool) {
+	inDegree := zeroInDegree(moduleIDs)
+	dependents := map[string][]string{}
+
+	var choose func(int) bool
+	choose = func(index int) bool {
+		if !isAcyclic(moduleIDs, inDegree, dependents) {
+			return false
+		}
+		if index == len(choices) {
+			return true
+		}
+		choice := choices[index]
+		for _, providerID := range choice.providerIDs {
+			inDegree[choice.consumerID]++
+			dependents[providerID] = append(dependents[providerID], choice.consumerID)
+			if choose(index + 1) {
+				return true
+			}
+			dependents[providerID] = dependents[providerID][:len(dependents[providerID])-1]
+			if len(dependents[providerID]) == 0 {
+				delete(dependents, providerID)
+			}
+			inDegree[choice.consumerID]--
+		}
+		return false
+	}
+
+	if !choose(0) {
+		return nil, nil, false
+	}
+	return maps.Clone(inDegree), cloneDependents(dependents), true
+}
+
+func isAcyclic(moduleIDs []string, inDegree map[string]int, dependents map[string][]string) bool {
+	degrees := maps.Clone(inDegree)
+	queue := []string{}
+	for _, id := range moduleIDs {
+		if degrees[id] == 0 {
+			queue = append(queue, id)
+		}
+	}
+
+	visited := 0
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+		visited++
+		for _, dependent := range dependents[current] {
+			degrees[dependent]--
+			if degrees[dependent] == 0 {
+				queue = append(queue, dependent)
+			}
+		}
+	}
+	return visited == len(moduleIDs)
+}
+
+func zeroInDegree(moduleIDs []string) map[string]int {
+	inDegree := make(map[string]int, len(moduleIDs))
+	for _, id := range moduleIDs {
+		inDegree[id] = 0
+	}
+	return inDegree
+}
+
+func sortedModuleIDs(byID map[string]Composable) []string {
+	ids := make([]string, 0, len(byID))
+	for id := range byID {
+		ids = append(ids, id)
+	}
+	slices.Sort(ids)
+	return ids
+}
+
+func cloneDependents(in map[string][]string) map[string][]string {
+	out := make(map[string][]string, len(in))
+	for key, value := range in {
+		out[key] = slices.Clone(value)
+	}
+	return out
 }
 
 func isNilComposable(module Composable) bool {

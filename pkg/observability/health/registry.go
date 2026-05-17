@@ -1,9 +1,10 @@
 package health
 
 // registry.go provides the default in-memory Registrar. Component results are
-// emitted in registration order for deterministic output. Aggregate status is
-// the worst component status: any Unhealthy → Unhealthy; otherwise any
-// Degraded → Degraded; otherwise Healthy.
+// emitted in registration order for deterministic output. The default checker
+// contract maps nil errors to Healthy and non-nil errors to Unhealthy; adapters
+// that can report partial impairment may return StatusDegraded through custom
+// registrars while preserving the same HTTP status semantics.
 //
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).

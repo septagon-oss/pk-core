@@ -64,9 +64,7 @@ func (e *expvarMetrics) Histogram(name string, labels ...string) Histogram {
 // supplied by the caller). An odd-length labels slice is a contract violation
 // and panics immediately so misuse surfaces at registration time.
 func encodeKey(name string, labels []string) string {
-	if len(labels)%2 != 0 {
-		panic("metrics: labels must be alternating key/value pairs (odd count: " + name + ")")
-	}
+	mustLabels(name, labels)
 	if len(labels) == 0 {
 		return name
 	}

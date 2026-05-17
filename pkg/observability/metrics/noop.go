@@ -11,21 +11,25 @@ type noopGauge struct{}
 type noopHistogram struct{}
 
 // Noop returns a Metrics whose Counter/Gauge/Histogram operations are no-ops.
-// Calls with empty names still panic so misuse is caught early.
+// Calls with invalid names or labels still panic so registration misuse is
+// caught even when metrics emission is disabled.
 func Noop() Metrics { return noopMetrics{} }
 
-func (noopMetrics) Counter(name string, _ ...string) Counter {
+func (noopMetrics) Counter(name string, labels ...string) Counter {
 	mustName(name)
+	mustLabels(name, labels)
 	return noopCounter{}
 }
 
-func (noopMetrics) Gauge(name string, _ ...string) Gauge {
+func (noopMetrics) Gauge(name string, labels ...string) Gauge {
 	mustName(name)
+	mustLabels(name, labels)
 	return noopGauge{}
 }
 
-func (noopMetrics) Histogram(name string, _ ...string) Histogram {
+func (noopMetrics) Histogram(name string, labels ...string) Histogram {
 	mustName(name)
+	mustLabels(name, labels)
 	return noopHistogram{}
 }
 
@@ -36,5 +40,11 @@ func (noopHistogram) Observe(float64) {}
 func mustName(name string) {
 	if name == "" {
 		panic("metrics: name must not be empty")
+	}
+}
+
+func mustLabels(name string, labels []string) {
+	if len(labels)%2 != 0 {
+		panic("metrics: labels must be alternating key/value pairs (odd count: " + name + ")")
 	}
 }

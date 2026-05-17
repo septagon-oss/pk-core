@@ -1,7 +1,7 @@
 package metrics_test
 
 // metrics_test.go validates the Metrics contract: Counter increments, Gauge
-// sets, Histogram observes, and Noop never panics.
+// sets, Histogram observes, and Noop preserves registration guardrails.
 //
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
@@ -35,4 +35,14 @@ func TestCounterRequiresNameNotEmpty(t *testing.T) {
 		}
 	}()
 	metrics.Noop().Counter("")
+}
+
+func TestNoopRequiresPairedLabels(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic on odd label count")
+		}
+	}()
+	metrics.Noop().Counter("requests_total", "method")
 }
