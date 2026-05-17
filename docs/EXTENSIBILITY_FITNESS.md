@@ -4,6 +4,10 @@ PlatformKit core is valuable only if downstream modules can evolve without
 forking framework semantics. This repo treats extensibility as a CI-enforced
 fitness function, not as a design aspiration.
 
+The fitness rule follows the composability contract in
+[COMPOSABILITY.md](COMPOSABILITY.md): core APIs should define stable building
+blocks, not product workflows or private implementation shortcuts.
+
 Run it with:
 
 ```bash
@@ -31,7 +35,7 @@ Use this rubric before adding anything to core:
 | Criterion | Pass condition |
 |---|---|
 | Minimality | The addition is a stable contract, not a product workflow, hosted feature, or provider adapter. |
-| Composability | It works through typed interfaces, descriptors, bundles, gates, or registries. |
+| Composability | It has identity, boundary, contract, contribution, deterministic composition, replacement, extension, runtime binding, and evidence. |
 | Isolation | It does not import private repos, concrete SaaS modules, cloud SDKs, DI containers, databases, queues, browsers, or deployment tools. |
 | Determinism | Ordering, conflict handling, normalization, and diagnostics are repeatable. |
 | Tenant safety | Tenant ownership is explicit, and mismatches are rejected where core has enough context to know they are invalid. |

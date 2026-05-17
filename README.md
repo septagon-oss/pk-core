@@ -8,6 +8,12 @@ to make composition, validation, policy vocabulary, entity metadata, and
 governed mutation boundaries explicit enough that independent modules can
 cooperate without importing each other's implementation.
 
+PlatformKit treats composability as a strict building-block contract:
+independent parts must be selectable, replaceable, inspectable, testable, and
+extensible through declared contracts. See
+[docs/COMPOSABILITY.md](docs/COMPOSABILITY.md) for the canonical definition of a
+PlatformKit block.
+
 - modules declare metadata, providers, invocations, provided ports, and required
   ports
 - bundles compose modules into catalogs
@@ -40,7 +46,8 @@ This is one of the minimum OSS repos:
 - `pk-apps`
 - `pk-docs`
 
-See [docs/OPEN_CORE.md](docs/OPEN_CORE.md) for the Pro extension boundary.
+See [docs/OPEN_CORE.md](docs/OPEN_CORE.md) for the Pro extension boundary and
+[docs/COMPOSABILITY.md](docs/COMPOSABILITY.md) for the building-block model.
 
 ## Quickstart
 
