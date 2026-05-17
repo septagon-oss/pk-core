@@ -19,6 +19,7 @@ import (
 type entry struct {
 	name    string
 	checker Checker
+	cfg     config
 }
 
 type registry struct {
@@ -32,21 +33,26 @@ func NewRegistry() Registrar {
 	return &registry{indexed: make(map[string]int)}
 }
 
-func (r *registry) Register(name string, checker Checker) {
+func (r *registry) Register(name string, checker Checker, opts ...Option) {
 	if name == "" {
 		panic("health: name must not be empty")
 	}
 	if checker == nil {
 		panic("health: checker must not be nil")
 	}
+	var cfg config
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if i, ok := r.indexed[name]; ok {
 		r.entries[i].checker = checker
+		r.entries[i].cfg = cfg
 		return
 	}
 	r.indexed[name] = len(r.entries)
-	r.entries = append(r.entries, entry{name: name, checker: checker})
+	r.entries = append(r.entries, entry{name: name, checker: checker, cfg: cfg})
 }
 
 func (r *registry) Check(ctx context.Context) Result {
@@ -58,7 +64,7 @@ func (r *registry) Check(ctx context.Context) Result {
 	out := Result{Status: StatusHealthy, Components: make([]ComponentResult, 0, len(snapshot))}
 	for _, e := range snapshot {
 		cr := ComponentResult{Name: e.name, Status: StatusHealthy}
-		if err := runChecker(ctx, e.checker); err != nil {
+		if err := runChecker(ctx, e.checker, e.cfg); err != nil {
 			cr.Status = StatusUnhealthy
 			cr.Error = err.Error()
 			out.Status = StatusUnhealthy
@@ -87,13 +93,39 @@ func (r *registry) HTTPHandler() http.Handler {
 	})
 }
 
-// runChecker invokes c with panic recovery so a single misbehaving checker
-// degrades only its own component instead of crashing the calling handler.
-func runChecker(ctx context.Context, c Checker) (err error) {
+// runChecker invokes c with panic recovery and optional per-checker timeout.
+// A panicked checker degrades only its own component (error "checker panicked:
+// <msg>"); a timed-out check returns "checker timed out after <d>" so the
+// aggregate report stays deterministic even when adapter code hangs.
+func runChecker(ctx context.Context, c Checker, cfg config) (err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			err = fmt.Errorf("checker panicked: %v", p)
 		}
 	}()
+
+	if cfg.timeout > 0 {
+		runCtx, cancel := context.WithTimeout(ctx, cfg.timeout)
+		defer cancel()
+
+		done := make(chan error, 1)
+		go func() {
+			defer func() {
+				if p := recover(); p != nil {
+					done <- fmt.Errorf("checker panicked: %v", p)
+					return
+				}
+			}()
+			done <- c.Check(runCtx)
+		}()
+
+		select {
+		case err = <-done:
+			return err
+		case <-runCtx.Done():
+			return fmt.Errorf("checker timed out after %s", cfg.timeout)
+		}
+	}
+
 	return c.Check(ctx)
 }

@@ -10,6 +10,7 @@ package health
 import (
 	"context"
 	"net/http"
+	"time"
 )
 
 // Status is the aggregate or per-component health state.
@@ -51,9 +52,24 @@ type Result struct {
 	Components []ComponentResult `json:"components"`
 }
 
+// Option configures Registry behavior at registration time.
+type Option func(*config)
+
+type config struct {
+	timeout time.Duration
+}
+
+// WithTimeout configures a max duration for the checker. If the checker does
+// not return within the timeout, its result is reported as Unhealthy with an
+// "checker timed out after <d>" error. Zero or negative duration disables the
+// timeout (default).
+func WithTimeout(d time.Duration) Option {
+	return func(c *config) { c.timeout = d }
+}
+
 // Registrar registers health checkers and produces aggregate reports.
 type Registrar interface {
-	Register(name string, checker Checker)
+	Register(name string, checker Checker, opts ...Option)
 	Check(ctx context.Context) Result
 	HTTPHandler() http.Handler
 }

@@ -12,7 +12,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/septagon-oss/pk-core/pkg/observability/health"
 )
@@ -145,5 +147,43 @@ func TestEmptyRegistryReportsHealthy(t *testing.T) {
 	}
 	if len(res.Components) != 0 {
 		t.Fatalf("len(Components) = %d, want 0", len(res.Components))
+	}
+}
+
+func TestRegistryEnforcesCheckerTimeout(t *testing.T) {
+	t.Parallel()
+	r := health.NewRegistry()
+	r.Register("slow", health.CheckerFunc(func(ctx context.Context) error {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(2 * time.Second):
+			return nil
+		}
+	}), health.WithTimeout(50*time.Millisecond))
+
+	start := time.Now()
+	res := r.Check(context.Background())
+	if elapsed := time.Since(start); elapsed > time.Second {
+		t.Fatalf("Check took %s, expected ~50ms because of timeout", elapsed)
+	}
+	if res.Status != health.StatusUnhealthy {
+		t.Fatalf("Status = %v, want Unhealthy after timeout", res.Status)
+	}
+	if !strings.Contains(res.Components[0].Error, "timed out") {
+		t.Fatalf("Error = %q, want to contain 'timed out'", res.Components[0].Error)
+	}
+}
+
+func TestRegistryNoTimeoutWhenOptionAbsent(t *testing.T) {
+	t.Parallel()
+	r := health.NewRegistry()
+	r.Register("quick", health.CheckerFunc(func(ctx context.Context) error {
+		time.Sleep(20 * time.Millisecond)
+		return nil
+	}))
+	res := r.Check(context.Background())
+	if res.Status != health.StatusHealthy {
+		t.Fatalf("Status = %v, want Healthy", res.Status)
 	}
 }
