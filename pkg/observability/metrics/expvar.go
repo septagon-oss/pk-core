@@ -11,6 +11,7 @@ package metrics
 
 import (
 	"expvar"
+	"strings"
 	"sync"
 )
 
@@ -30,29 +31,57 @@ func NewExpvar(m *expvar.Map) Metrics {
 	return &expvarMetrics{m: m, cnt: make(map[string]*expvar.Float)}
 }
 
-func (e *expvarMetrics) Counter(name string, _ ...string) Counter {
+func (e *expvarMetrics) Counter(name string, labels ...string) Counter {
 	mustName(name)
-	return &expvarCounter{f: e.float(name)}
+	return &expvarCounter{f: e.float(encodeKey(name, labels))}
 }
 
-func (e *expvarMetrics) Gauge(name string, _ ...string) Gauge {
+func (e *expvarMetrics) Gauge(name string, labels ...string) Gauge {
 	mustName(name)
-	return &expvarGauge{f: e.float(name)}
+	return &expvarGauge{f: e.float(encodeKey(name, labels))}
 }
 
-// Histogram registers two expvar.Float keys: "<name>_sum" and "<name>_count".
-// Callers must NOT register a separate Counter/Gauge/Histogram under any of
-// "<name>", "<name>_sum", or "<name>_count" — the underlying expvar storage
-// is shared by metric name, and a collision corrupts both metrics silently.
-// This default is deliberately lean; collision detection lives in adapter
-// implementations (Prometheus, OpenTelemetry) where the metric type system
-// catches the mistake.
-func (e *expvarMetrics) Histogram(name string, _ ...string) Histogram {
+// Histogram registers two expvar.Float keys: "<key>_sum" and "<key>_count",
+// where <key> is the labeled metric key (see encodeKey). Callers must NOT
+// register a separate Counter/Gauge/Histogram under any of "<key>",
+// "<key>_sum", or "<key>_count" — the underlying expvar storage is shared by
+// name, and a collision corrupts both metrics silently. This default is
+// deliberately lean; collision detection lives in adapter implementations
+// (Prometheus, OpenTelemetry) where the metric type system catches the mistake.
+func (e *expvarMetrics) Histogram(name string, labels ...string) Histogram {
 	mustName(name)
+	key := encodeKey(name, labels)
 	return &expvarHistogram{
-		sum:   e.float(name + "_sum"),
-		count: e.float(name + "_count"),
+		sum:   e.float(key + "_sum"),
+		count: e.float(key + "_count"),
 	}
+}
+
+// encodeKey produces a stable, observable storage key from a metric name plus
+// alternating label key/value pairs. Empty labels list returns the raw name;
+// non-empty labels produce "name{k1=v1,k2=v2,...}" (deterministic order, as
+// supplied by the caller). An odd-length labels slice is a contract violation
+// and panics immediately so misuse surfaces at registration time.
+func encodeKey(name string, labels []string) string {
+	if len(labels)%2 != 0 {
+		panic("metrics: labels must be alternating key/value pairs (odd count: " + name + ")")
+	}
+	if len(labels) == 0 {
+		return name
+	}
+	var b strings.Builder
+	b.WriteString(name)
+	b.WriteByte('{')
+	for i := 0; i+1 < len(labels); i += 2 {
+		if i > 0 {
+			b.WriteByte(',')
+		}
+		b.WriteString(labels[i])
+		b.WriteByte('=')
+		b.WriteString(labels[i+1])
+	}
+	b.WriteByte('}')
+	return b.String()
 }
 
 func (e *expvarMetrics) float(name string) *expvar.Float {

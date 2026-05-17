@@ -70,3 +70,30 @@ func TestExpvarHistogramSumAndCount(t *testing.T) {
 		t.Fatalf("count = %v, want 3", count.Value())
 	}
 }
+
+func TestExpvarLabelsProduceDistinctStorage(t *testing.T) {
+	t.Parallel()
+	mp := new(expvar.Map).Init()
+	m := metrics.NewExpvar(mp)
+	m.Counter("requests", "method", "GET").Add(1)
+	m.Counter("requests", "method", "GET").Add(2)
+	m.Counter("requests", "method", "POST").Add(7)
+
+	if got := mp.Get("requests{method=GET}").(*expvar.Float).Value(); got != 3 {
+		t.Fatalf("GET counter = %v, want 3", got)
+	}
+	if got := mp.Get("requests{method=POST}").(*expvar.Float).Value(); got != 7 {
+		t.Fatalf("POST counter = %v, want 7", got)
+	}
+}
+
+func TestExpvarOddLabelsPanic(t *testing.T) {
+	t.Parallel()
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic for odd-length labels")
+		}
+	}()
+	mp := new(expvar.Map).Init()
+	metrics.NewExpvar(mp).Counter("requests", "method")
+}
