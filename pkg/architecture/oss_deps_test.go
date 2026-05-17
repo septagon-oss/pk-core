@@ -59,6 +59,9 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/security/csrf",
 	"github.com/septagon-oss/pk-core/pkg/security/identity",
 	"github.com/septagon-oss/pk-core/pkg/security/ratelimit",
+	"github.com/septagon-oss/pk-core/pkg/security/authn",
+	"github.com/septagon-oss/pk-core/pkg/security/authz",
+	"github.com/septagon-oss/pk-core/pkg/security/middlewarepolicy",
 	// security/* appended as they land
 }
 
