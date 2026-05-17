@@ -8,7 +8,10 @@ package metrics_test
 // Convention: C-14 (every Go file declares its purpose).
 
 import (
+	"encoding/json"
 	"expvar"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/septagon-oss/pk-core/pkg/observability/metrics"
@@ -96,4 +99,35 @@ func TestExpvarOddLabelsPanic(t *testing.T) {
 	}()
 	mp := new(expvar.Map).Init()
 	metrics.NewExpvar(mp).Counter("requests", "method")
+}
+
+func TestExpvarHTTPHandlerExportsJSON(t *testing.T) {
+	t.Parallel()
+	mp := new(expvar.Map).Init()
+	m := metrics.NewExpvar(mp)
+	m.Counter("requests_total", "method", "GET").Add(3)
+
+	handler, ok := metrics.HTTPHandler(m)
+	if !ok {
+		t.Fatal("expected expvar metrics to expose an HTTP handler")
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	handler.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if got := rec.Header().Get("Content-Type"); got != "application/json" {
+		t.Fatalf("Content-Type = %q, want application/json", got)
+	}
+
+	var body map[string]float64
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode metrics JSON: %v", err)
+	}
+	if got := body["requests_total{method=GET}"]; got != 3 {
+		t.Fatalf("requests_total{method=GET} = %v, want 3", got)
+	}
 }

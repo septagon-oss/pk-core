@@ -8,6 +8,8 @@
 // Convention: C-14 (every Go file declares its purpose).
 package metrics
 
+import "net/http"
+
 // Metrics is the provider-neutral metrics contract.
 //
 // Metric names share a single namespace across Counter/Gauge/Histogram in the
@@ -24,6 +26,24 @@ type Metrics interface {
 	Counter(name string, labels ...string) Counter
 	Gauge(name string, labels ...string) Gauge
 	Histogram(name string, labels ...string) Histogram
+}
+
+// HTTPExporter is the optional capability implemented by metrics adapters that
+// can expose their current values through HTTP.
+//
+// It is intentionally separate from Metrics so push-based adapters can record
+// metrics without pretending to own an HTTP projection.
+type HTTPExporter interface {
+	HTTPHandler() http.Handler
+}
+
+// HTTPHandler returns m's HTTP exporter when the adapter provides one.
+func HTTPHandler(m Metrics) (http.Handler, bool) {
+	exporter, ok := m.(HTTPExporter)
+	if !ok {
+		return nil, false
+	}
+	return exporter.HTTPHandler(), true
 }
 
 // Counter is a monotonically-increasing scalar metric.

@@ -11,6 +11,7 @@ package metrics
 
 import (
 	"expvar"
+	"net/http"
 	"strings"
 	"sync"
 )
@@ -82,6 +83,16 @@ func encodeKey(name string, labels []string) string {
 	}
 	b.WriteByte('}')
 	return b.String()
+}
+
+// HTTPHandler returns an http.Handler that writes the current expvar.Map as
+// JSON. Callers typically expose this at /metrics or /debug/pk-metrics.
+func (e *expvarMetrics) HTTPHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(e.m.String()))
+	})
 }
 
 func (e *expvarMetrics) float(name string) *expvar.Float {

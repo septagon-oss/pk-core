@@ -1,9 +1,10 @@
 // Package metrics defines the PlatformKit OSS metrics contract.
 //
 // Three primitives — Counter, Gauge, Histogram — keyed by name and optional
-// labels. The default implementations are Noop (for tests) and expvar (for
-// /debug/vars). Prometheus, OpenTelemetry, and StatsD adapters live in
-// downstream packages so the OSS kernel stays dependency-free.
+// labels. Adapters that can expose their current values over HTTP implement the
+// optional HTTPExporter capability. The default implementations are Noop (for
+// tests) and expvar (for /debug/vars). Prometheus, OpenTelemetry, and StatsD
+// adapters live in downstream packages so the OSS kernel stays dependency-free.
 //
 // Usage:
 //

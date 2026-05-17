@@ -20,6 +20,13 @@ func TestNoopAcceptsAllOperations(t *testing.T) {
 	m.Histogram("latency_ms").Observe(12.3)
 }
 
+func TestNoopDoesNotExposeHTTP(t *testing.T) {
+	t.Parallel()
+	if _, ok := metrics.HTTPHandler(metrics.Noop()); ok {
+		t.Fatal("noop metrics should not expose an HTTP handler")
+	}
+}
+
 func TestCounterRequiresNameNotEmpty(t *testing.T) {
 	t.Parallel()
 	defer func() {
