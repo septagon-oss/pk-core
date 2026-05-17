@@ -1,5 +1,11 @@
 package module
 
+// catalog.go owns bundle-to-catalog composition so OSS and Pro module packs
+// can contribute modules through the same deterministic lookup surface.
+//
+// ADR: ADR-0017 (composition through dependency injection), ADR-0029 (file purpose declaration).
+// Convention: C-10 (shared builders return errors), C-14 (file purpose declaration).
+
 import (
 	"errors"
 	"fmt"
@@ -16,7 +22,7 @@ type Entry struct {
 	New Constructor
 }
 
-// Bundle is the public extension seam for registering modules.
+// Bundle is the public extension point for registering modules.
 type Bundle interface {
 	Name() string
 	Entries() []Entry
@@ -73,6 +79,9 @@ func NewCatalog() *CatalogBuilder {
 
 // Add appends a Bundle.
 func (b *CatalogBuilder) Add(bundle Bundle) *CatalogBuilder {
+	if b == nil {
+		return b
+	}
 	if bundle != nil {
 		b.bundles = append(b.bundles, bundle)
 	}
@@ -81,6 +90,9 @@ func (b *CatalogBuilder) Add(bundle Bundle) *CatalogBuilder {
 
 // AddAll appends multiple Bundles.
 func (b *CatalogBuilder) AddAll(bundles ...Bundle) *CatalogBuilder {
+	if b == nil {
+		return b
+	}
 	for _, bundle := range bundles {
 		b.Add(bundle)
 	}
@@ -89,6 +101,9 @@ func (b *CatalogBuilder) AddAll(bundles ...Bundle) *CatalogBuilder {
 
 // WithConflictPolicy sets duplicate handling.
 func (b *CatalogBuilder) WithConflictPolicy(policy ConflictPolicy) *CatalogBuilder {
+	if b == nil {
+		return b
+	}
 	b.policy = policy
 	return b
 }
@@ -102,6 +117,12 @@ type Catalog struct {
 
 // Build resolves the catalog.
 func (b *CatalogBuilder) Build() (*Catalog, error) {
+	if b == nil {
+		return &Catalog{
+			entries: map[string]Entry{},
+			sources: map[string]string{},
+		}, nil
+	}
 	catalog := &Catalog{
 		entries: map[string]Entry{},
 		sources: map[string]string{},

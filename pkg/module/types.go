@@ -2,6 +2,12 @@
 // framework.
 package module
 
+// types.go owns the embeddable OSS module type and typed port vocabulary that
+// downstream modules extend without changing the core architectural model.
+//
+// ADR: ADR-0009 (ports-only module communication), ADR-0029 (file purpose declaration).
+// Convention: C-10 (shared builders return errors), C-14 (file purpose declaration).
+
 import (
 	"fmt"
 	"reflect"
@@ -37,64 +43,51 @@ func (m Metadata) Normalize() (Metadata, error) {
 // Port names a typed contract that one module provides and another module
 // consumes. Name is derived from a Go interface type by PortOf.
 type Port struct {
-	Name    string
+	// Name is the stable package-qualified Go interface name.
+	Name string
+
+	// Version is interpreted by context: provided ports use a concrete
+	// producer version, dependency ports use a version constraint.
 	Version string
 }
 
 // PortOf returns the stable public port name for interface T.
 func PortOf[T any](version string) Port {
+	return Port{Name: portNameOf[T]("module.PortOf"), Version: strings.TrimSpace(version)}
+}
+
+func portNameOf[T any](caller string) string {
 	var zero *T
 	t := reflect.TypeOf(zero)
 	if t == nil {
-		panic("module.PortOf: unresolved type parameter")
+		panic(caller + ": unresolved type parameter")
 	}
 	elem := t.Elem()
 	if elem.Kind() != reflect.Interface {
-		panic(fmt.Sprintf("module.PortOf[%s]: T must be an interface", elem.String()))
+		panic(fmt.Sprintf("%s[%s]: T must be an interface", caller, elem.String()))
 	}
-	return Port{Name: elem.PkgPath() + "." + elem.Name(), Version: strings.TrimSpace(version)}
+	if elem.PkgPath() == "" || elem.Name() == "" {
+		panic(fmt.Sprintf("%s[%s]: T must be a named interface", caller, elem.String()))
+	}
+	return elem.PkgPath() + "." + elem.Name()
 }
 
 // Dependency declares that a module consumes a port.
 type Dependency struct {
-	Port              Port
-	Required          bool
-	Purpose           string
-	PreferredProvider string
+	Port              Port               `json:"port"`
+	Required          bool               `json:"required"`
+	Purpose           string             `json:"purpose,omitempty"`
+	Category          DependencyCategory `json:"category,omitempty"`
+	SubCategory       string             `json:"sub_category,omitempty"`
+	PreferredProvider string             `json:"preferred_provider,omitempty"`
+	FallbackProviders []string           `json:"fallback_providers,omitempty"`
 }
 
-// DependencySpec is the human-authored part of a dependency declaration.
-type DependencySpec struct {
-	Version           string
-	Required          bool
-	Purpose           string
-	PreferredProvider string
-}
-
-// Require declares a required dependency on interface T.
-func Require[T any](spec DependencySpec) Dependency {
-	spec.Required = true
-	return dependencyOf[T](spec)
-}
-
-// Optional declares an optional dependency on interface T.
-func Optional[T any](spec DependencySpec) Dependency {
-	spec.Required = false
-	return dependencyOf[T](spec)
-}
-
-func dependencyOf[T any](spec DependencySpec) Dependency {
-	return Dependency{
-		Port:              PortOf[T](spec.Version),
-		Required:          spec.Required,
-		Purpose:           strings.TrimSpace(spec.Purpose),
-		PreferredProvider: strings.TrimSpace(spec.PreferredProvider),
-	}
-}
-
-// Provide declares that a module provides interface T.
+// Provide declares that a module provides interface T. It intentionally only
+// records the human-authored version string; Compose/Validate surface malformed
+// versions as ordinary errors at the composition boundary.
 func Provide[T any](version string) Port {
-	return PortOf[T](version)
+	return Port{Name: portNameOf[T]("module.Provide"), Version: strings.TrimSpace(version)}
 }
 
 // Composable is the minimal read-only contract for a PlatformKit module.
@@ -155,7 +148,7 @@ type Option func(*Module)
 // WithDependencies appends dependency declarations.
 func WithDependencies(deps ...Dependency) Option {
 	return func(m *Module) {
-		m.dependencies = append(m.dependencies, deps...)
+		m.dependencies = append(m.dependencies, copyDependencies(deps)...)
 	}
 }
 
@@ -185,7 +178,7 @@ func (m *Module) Metadata() Metadata {
 }
 
 func (m *Module) Dependencies() []Dependency {
-	return append([]Dependency(nil), m.dependencies...)
+	return copyDependencies(m.dependencies)
 }
 
 func (m *Module) Provides() []Port {
@@ -198,4 +191,16 @@ func (m *Module) Providers() []any {
 
 func (m *Module) Invocations() []any {
 	return append([]any(nil), m.invocations...)
+}
+
+func copyDependencies(deps []Dependency) []Dependency {
+	if len(deps) == 0 {
+		return nil
+	}
+	out := make([]Dependency, len(deps))
+	for i, dep := range deps {
+		out[i] = dep
+		out[i].FallbackProviders = append([]string(nil), dep.FallbackProviders...)
+	}
+	return out
 }

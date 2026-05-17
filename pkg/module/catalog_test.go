@@ -1,5 +1,11 @@
 package module_test
 
+// catalog_test.go validates bundle catalog construction, duplicate handling,
+// and module instantiation contracts.
+//
+// ADR: ADR-0017 (composition through dependency injection), ADR-0029 (file purpose declaration).
+// Convention: C-14 (every Go file declares its purpose).
+
 import (
 	"errors"
 	"slices"
@@ -61,5 +67,28 @@ func TestCatalogUnknownModule(t *testing.T) {
 	_, err := catalog.BuildModule("missing")
 	if !errors.Is(err, module.ErrUnknownModule) {
 		t.Fatalf("BuildModule() error = %v, want ErrUnknownModule", err)
+	}
+}
+
+func TestCatalogBuilderNilReceiverIsSafe(t *testing.T) {
+	t.Parallel()
+
+	var builder *module.CatalogBuilder
+	if got := builder.Add(nil); got != nil {
+		t.Fatalf("Add(nil) = %#v, want nil builder", got)
+	}
+	if got := builder.AddAll(); got != nil {
+		t.Fatalf("AddAll() = %#v, want nil builder", got)
+	}
+	if got := builder.WithConflictPolicy(module.ConflictReject); got != nil {
+		t.Fatalf("WithConflictPolicy() = %#v, want nil builder", got)
+	}
+
+	catalog, err := builder.Build()
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	if got := len(catalog.ModuleIDs()); got != 0 {
+		t.Fatalf("nil builder ModuleIDs length = %d, want 0", got)
 	}
 }
