@@ -54,6 +54,9 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/security/passhash",
 	"github.com/septagon-oss/pk-core/pkg/security/cookies",
 	"github.com/septagon-oss/pk-core/pkg/security/signature",
+	"github.com/septagon-oss/pk-core/pkg/security/headers",
+	"github.com/septagon-oss/pk-core/pkg/security/cors",
+	"github.com/septagon-oss/pk-core/pkg/security/csrf",
 	// security/* appended as they land
 }
 
