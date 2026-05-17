@@ -10,6 +10,12 @@ import "context"
 // LoggerExtractor pulls trace_id and span_id from the active span on ctx, if any.
 // Both keys are emitted only when the span reports non-empty IDs (i.e. a real
 // tracer is wired). Use as: logger.NewSlog(handler, tracing.LoggerExtractor).
+//
+// When this extractor is registered, the attribute keys "trace_id" and
+// "span_id" are reserved by the observability stack. Callers should not set
+// them manually via With() or log args — slog handlers do not dedupe, so
+// manual values produce duplicate keys in the same record alongside the
+// extractor-injected ones.
 func LoggerExtractor(ctx context.Context) []any {
 	span := SpanFromContext(ctx)
 	sc := span.Context()

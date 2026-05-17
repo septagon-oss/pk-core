@@ -47,11 +47,24 @@ func HTTPHandler(m Metrics) (http.Handler, bool) {
 }
 
 // Counter is a monotonically-increasing scalar metric.
-// Callers must pass delta >= 0. Passing a negative delta is a contract
-// violation; behavior is implementation-defined and may produce nonsense
-// readings or panic in stricter adapters.
+//
+// Callers SHOULD pass delta >= 0. The contract is intentionally a SHOULD, not
+// a MUST, because adapters differ in how they enforce it:
+//
+//   - The default expvar adapter silently accepts negative deltas (they
+//     decrement the underlying expvar.Float). This is the pragmatic stdlib
+//     behavior and lets callers use Counter for trivially-bounded gauges in
+//     tests without panic risk.
+//   - The Noop adapter ignores all values.
+//   - Stricter adapters (e.g. a future Prometheus adapter) MAY panic or log a
+//     guardrail warning on negative deltas, since Prometheus counters are
+//     defined to be monotonic.
+//
+// Treat any code path that passes a negative delta as a bug, even when the
+// adapter you happen to be running tolerates it.
 type Counter interface {
-	// Add increments the counter by delta. delta must be >= 0.
+	// Add increments the counter by delta. See Counter for the SHOULD-be-positive
+	// contract.
 	Add(delta float64)
 }
 
