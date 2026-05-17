@@ -12,8 +12,11 @@ package metrics
 //
 // Metric names share a single namespace across Counter/Gauge/Histogram in the
 // default implementations; callers must use distinct names per metric kind.
-// Adapter implementations (Prometheus, OpenTelemetry) may enforce kind
-// separation themselves.
+// Labels are alternating key/value pairs and DO produce distinct underlying
+// storage in the default implementations (so "requests{method=GET}" and
+// "requests{method=POST}" are tracked independently). Odd-length label lists
+// panic at registration time. Adapter implementations (Prometheus, OpenTelemetry)
+// may enforce additional rules.
 //
 // Implementations must be safe for concurrent use and must panic on empty
 // metric names so misuse is caught at registration time, not runtime.
