@@ -13,7 +13,9 @@ import "context"
 type Tracer interface {
 	// Start begins a new span. The returned context carries the span so it
 	// can be retrieved by SpanFromContext deeper in the call chain. Callers
-	// must call span.End() exactly once, typically via defer.
+	// must call span.End() exactly once, typically via defer. Implementations
+	// SHOULD apply the supplied attrs at span creation time so they are
+	// visible to downstream samplers and exporters.
 	Start(ctx context.Context, name string, attrs ...Attr) (context.Context, Span)
 }
 

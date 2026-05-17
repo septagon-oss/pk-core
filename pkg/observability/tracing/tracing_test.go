@@ -39,3 +39,46 @@ func TestSpanFromContextDefaultsToNoop(t *testing.T) {
 	}
 	span.End()
 }
+
+func TestContextWithSpanRoundTrip(t *testing.T) {
+	t.Parallel()
+	fake := &fakeSpan{}
+	ctx := tracing.ContextWithSpan(context.Background(), fake)
+	got := tracing.SpanFromContext(ctx)
+	if got != fake {
+		t.Fatalf("SpanFromContext returned %v, want the fake span stored via ContextWithSpan", got)
+	}
+}
+
+func TestStartPropagatesSpanThroughContext(t *testing.T) {
+	t.Parallel()
+	tr := tracing.Noop()
+	ctx, span := tr.Start(context.Background(), "op")
+	got := tracing.SpanFromContext(ctx)
+	if got != span {
+		t.Fatalf("SpanFromContext after Start returned %v, want the span returned by Start (%v)", got, span)
+	}
+}
+
+func TestNoopSpanMethodsDirectCall(t *testing.T) {
+	t.Parallel()
+	// Resolve a noop span via the public path so the *concrete* noopSpan type
+	// gets its methods exercised under Go's coverage instrumentation.
+	span := tracing.SpanFromContext(context.Background())
+	span.SetAttr("k", "v")
+	span.SetStatus(tracing.StatusOK, "ok")
+	span.SetStatus(tracing.StatusError, "err")
+	span.SetStatus(tracing.StatusUnset, "")
+	span.RecordError(nil)
+	span.End()
+}
+
+// fakeSpan is a minimal Span used to verify context propagation. End/SetAttr/SetStatus/RecordError
+// are no-ops but distinct from the package's internal noopSpan, so identity comparisons in
+// TestContextWithSpanRoundTrip prove the same value goes in and comes out.
+type fakeSpan struct{}
+
+func (*fakeSpan) SetAttr(string, any)                  {}
+func (*fakeSpan) SetStatus(tracing.StatusCode, string) {}
+func (*fakeSpan) RecordError(error)                    {}
+func (*fakeSpan) End()                                 {}
