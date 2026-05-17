@@ -52,7 +52,8 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/observability/guardrail",
 	"github.com/septagon-oss/pk-core/pkg/security",
 	"github.com/septagon-oss/pk-core/pkg/security/passhash",
-	// security/* appended as they land (Tasks 6, 8)
+	"github.com/septagon-oss/pk-core/pkg/security/cookies",
+	// security/* appended as they land (Task 9: signature)
 }
 
 func TestPkCoreImportsAreAllowed(t *testing.T) {
