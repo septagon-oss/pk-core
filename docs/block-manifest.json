@@ -93,7 +93,7 @@
       "compositionLaws": ["substitution", "runtime binding"],
       "extensionPoints": ["context extractors", "HTTP exporters", "health checks", "guardrail catalog"],
       "evidence": [
-        "pkg/architecture/observability_deps_test.go",
+        "pkg/architecture/oss_deps_test.go",
         "pkg/observability/logger/logger_test.go",
         "pkg/observability/metrics/metrics_test.go",
         "pkg/observability/health/health_test.go",
