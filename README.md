@@ -52,6 +52,8 @@ Use [docs/COMPOSABILITY_AUDIT.md](docs/COMPOSABILITY_AUDIT.md) to audit whether
 a public block is actually composable.
 [docs/BLOCKS_AND_CHAINS.md](docs/BLOCKS_AND_CHAINS.md) explains the difference
 between composable product blocks and chainable runtime flows.
+`docs/block-manifest.json` is the machine-readable public block inventory that
+CI validates for v0.0.0 release readiness.
 
 ## Quickstart
 

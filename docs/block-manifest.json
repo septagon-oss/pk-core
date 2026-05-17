@@ -1,0 +1,105 @@
+{
+  "schemaVersion": "pk.block-manifest.v1",
+  "repository": "pk-core",
+  "blocks": [
+    {
+      "id": "pk-core.module",
+      "kind": "primitive",
+      "owner": "pk-core",
+      "version": "0.0.0",
+      "package": "github.com/septagon-oss/pk-core/pkg/module",
+      "status": "composable",
+      "contracts": ["Module", "Composable", "Bundle", "Catalog", "Port", "Dependency", "Compose"],
+      "compositionLaws": ["identity", "associativity", "closure", "determinism", "diagnostics", "substitution"],
+      "extensionPoints": ["metadata", "providers", "invocations", "provided ports", "required ports"],
+      "evidence": [
+        "pkg/module/catalog_test.go",
+        "pkg/module/compose_test.go",
+        "pkg/module/dependency_test.go",
+        "pkg/architecture/extensibility_test.go"
+      ]
+    },
+    {
+      "id": "pk-core.registry",
+      "kind": "primitive",
+      "owner": "pk-core",
+      "version": "0.0.0",
+      "package": "github.com/septagon-oss/pk-core/pkg/registry",
+      "status": "composable",
+      "contracts": ["Registry", "CatalogBuilder", "Catalog", "RuleRegistry", "Spec", "Diagnostic"],
+      "compositionLaws": ["identity", "closure", "determinism", "diagnostics"],
+      "extensionPoints": ["conflict policy", "validation hook", "source diagnostics", "registry metadata"],
+      "evidence": [
+        "pkg/registry/catalog_test.go",
+        "pkg/registry/registry_test.go",
+        "pkg/registry/rule_registry_test.go",
+        "pkg/registry/spec_test.go",
+        "pkg/architecture/extensibility_test.go"
+      ]
+    },
+    {
+      "id": "pk-core.authz",
+      "kind": "primitive",
+      "owner": "pk-core",
+      "version": "0.0.0",
+      "package": "github.com/septagon-oss/pk-core/pkg/authz",
+      "status": "composable",
+      "contracts": ["Principal", "Resource", "Request", "Policy", "Evaluator", "AggregateEvaluator"],
+      "compositionLaws": ["closure", "determinism", "substitution"],
+      "extensionPoints": ["policy descriptors", "custom evaluators", "aggregate evaluators"],
+      "evidence": [
+        "pkg/authz/authz_test.go",
+        "pkg/architecture/extensibility_test.go"
+      ]
+    },
+    {
+      "id": "pk-core.entity",
+      "kind": "primitive",
+      "owner": "pk-core",
+      "version": "0.0.0",
+      "package": "github.com/septagon-oss/pk-core/pkg/entity",
+      "status": "composable",
+      "contracts": ["Descriptor", "Field", "Relationship", "Policy", "Catalog"],
+      "compositionLaws": ["closure", "determinism", "diagnostics"],
+      "extensionPoints": ["fields", "relationships", "capabilities", "policy tokens", "metadata"],
+      "evidence": [
+        "pkg/entity/entity_test.go",
+        "pkg/architecture/extensibility_test.go"
+      ]
+    },
+    {
+      "id": "pk-core.mutation",
+      "kind": "primitive",
+      "owner": "pk-core",
+      "version": "0.0.0",
+      "package": "github.com/septagon-oss/pk-core/pkg/mutation",
+      "status": "composable",
+      "contracts": ["Intent", "Rule", "Gate", "RuleGate", "Catalog"],
+      "compositionLaws": ["closure", "determinism", "diagnostics"],
+      "extensionPoints": ["mutation rules", "default decision", "custom gates"],
+      "evidence": [
+        "pkg/mutation/mutation_test.go",
+        "pkg/architecture/extensibility_test.go"
+      ]
+    },
+    {
+      "id": "pk-core.observability",
+      "kind": "primitive",
+      "owner": "pk-core",
+      "version": "0.0.0",
+      "package": "github.com/septagon-oss/pk-core/pkg/observability",
+      "status": "composable",
+      "contracts": ["Logger", "Tracer", "Metrics", "HealthRegistry", "Guardrail"],
+      "compositionLaws": ["substitution", "runtime binding"],
+      "extensionPoints": ["context extractors", "HTTP exporters", "health checks", "guardrail catalog"],
+      "evidence": [
+        "pkg/architecture/observability_deps_test.go",
+        "pkg/observability/logger/logger_test.go",
+        "pkg/observability/metrics/metrics_test.go",
+        "pkg/observability/health/health_test.go",
+        "pkg/observability/guardrail/guardrail_test.go",
+        "pkg/observability/tracing/tracing_test.go"
+      ]
+    }
+  ]
+}
