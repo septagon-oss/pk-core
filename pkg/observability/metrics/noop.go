@@ -29,9 +29,9 @@ func (noopMetrics) Histogram(name string, _ ...string) Histogram {
 	return noopHistogram{}
 }
 
-func (noopCounter) Add(float64)        {}
-func (noopGauge) Set(float64)          {}
-func (noopHistogram) Observe(float64)  {}
+func (noopCounter) Add(float64)       {}
+func (noopGauge) Set(float64)         {}
+func (noopHistogram) Observe(float64) {}
 
 func mustName(name string) {
 	if name == "" {
