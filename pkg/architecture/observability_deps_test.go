@@ -42,9 +42,6 @@ func TestObservabilityHasNoExternalDeps(t *testing.T) {
 
 func isStdLib(importPath string) bool {
 	// Standard library packages have no dot in their first path segment.
-	first := importPath
-	if idx := strings.Index(importPath, "/"); idx >= 0 {
-		first = importPath[:idx]
-	}
+	first, _, _ := strings.Cut(importPath, "/")
 	return !strings.Contains(first, ".")
 }
