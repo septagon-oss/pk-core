@@ -1,0 +1,58 @@
+// Package tracing defines PlatformKit's provider-neutral tracing contract.
+//
+// tracing.go owns the Tracer and Span interfaces and the context-key plumbing
+// used to thread the active span through call chains.
+//
+// ADR: ADR-0029 (file purpose declaration).
+// Convention: C-14 (every Go file declares its purpose).
+package tracing
+
+import "context"
+
+// Tracer creates spans.
+type Tracer interface {
+	// Start begins a new span. The returned context carries the span so it
+	// can be retrieved by SpanFromContext deeper in the call chain. Callers
+	// must call span.End() exactly once, typically via defer.
+	Start(ctx context.Context, name string, attrs ...Attr) (context.Context, Span)
+}
+
+// Span is an in-flight operation record.
+type Span interface {
+	SetAttr(key string, value any)
+	SetStatus(code StatusCode, description string)
+	RecordError(err error)
+	End()
+}
+
+// Attr is an initial span attribute provided at Start.
+type Attr struct {
+	Key   string
+	Value any
+}
+
+// StatusCode describes a span's final status.
+type StatusCode int
+
+const (
+	StatusUnset StatusCode = iota
+	StatusOK
+	StatusError
+)
+
+type spanKey struct{}
+
+// ContextWithSpan returns ctx with span attached. Used by Tracer
+// implementations; rarely needed by callers.
+func ContextWithSpan(ctx context.Context, span Span) context.Context {
+	return context.WithValue(ctx, spanKey{}, span)
+}
+
+// SpanFromContext returns the active Span from ctx, or a noop Span if none.
+// Never returns nil.
+func SpanFromContext(ctx context.Context) Span {
+	if v, ok := ctx.Value(spanKey{}).(Span); ok && v != nil {
+		return v
+	}
+	return noopSpan{}
+}
