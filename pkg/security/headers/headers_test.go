@@ -10,6 +10,7 @@
 package headers_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"sort"
@@ -123,8 +124,11 @@ func TestNonceFromContextReturnsNonceInsideHandler(t *testing.T) {
 		t.Fatalf("CSP %q does not contain the context nonce %q", csp, ctxNonce)
 	}
 
-	// Without Middleware, NonceFromContext must return "".
-	if got := headers.NonceFromContext(nil); got != "" {
+	// NonceFromContext deliberately treats a nil context as absent metadata;
+	// keep this defensive contract covered without passing a nil literal in
+	// ordinary call-site shape.
+	var nilContext context.Context
+	if got := headers.NonceFromContext(nilContext); got != "" {
 		t.Fatalf("NonceFromContext(nil) = %q, want \"\"", got)
 	}
 }
