@@ -50,7 +50,9 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/observability/tracing",
 	"github.com/septagon-oss/pk-core/pkg/observability/health",
 	"github.com/septagon-oss/pk-core/pkg/observability/guardrail",
-	// security/* appended as they land (Tasks 4, 6, 8)
+	"github.com/septagon-oss/pk-core/pkg/security",
+	"github.com/septagon-oss/pk-core/pkg/security/passhash",
+	// security/* appended as they land (Tasks 6, 8)
 }
 
 func TestPkCoreImportsAreAllowed(t *testing.T) {
