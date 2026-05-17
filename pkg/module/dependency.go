@@ -154,7 +154,7 @@ func parseSemver(s string) (semver, error) {
 	if s == "" {
 		return semver{}, nil
 	}
-	s = strings.TrimPrefix(s, "v")
+	s, _ = strings.CutPrefix(s, "v")
 	if s == "" {
 		return semver{}, fmt.Errorf("missing numeric version")
 	}
@@ -225,8 +225,8 @@ func parseVersionConstraint(constraint string) ([]versionComparator, error) {
 	if c == "" || c == "*" {
 		return nil, nil
 	}
-	if strings.HasPrefix(c, "^") {
-		base, err := parseConstraintSemver(strings.TrimPrefix(c, "^"))
+	if baseRaw, ok := strings.CutPrefix(c, "^"); ok {
+		base, err := parseConstraintSemver(baseRaw)
 		if err != nil {
 			return nil, err
 		}
@@ -236,8 +236,8 @@ func parseVersionConstraint(constraint string) ([]versionComparator, error) {
 			{op: "<", want: upper},
 		}, nil
 	}
-	if strings.HasPrefix(c, "~") {
-		base, err := parseConstraintSemver(strings.TrimPrefix(c, "~"))
+	if baseRaw, ok := strings.CutPrefix(c, "~"); ok {
+		base, err := parseConstraintSemver(baseRaw)
 		if err != nil {
 			return nil, err
 		}
@@ -276,8 +276,8 @@ func caretUpperBound(base semver) semver {
 
 func parseSingleComparator(p string) (versionComparator, error) {
 	for _, op := range []string{">=", "<=", "==", "!=", ">", "<"} {
-		if strings.HasPrefix(p, op) {
-			ver, err := parseConstraintSemver(strings.TrimPrefix(p, op))
+		if versionRaw, ok := strings.CutPrefix(p, op); ok {
+			ver, err := parseConstraintSemver(versionRaw)
 			if err != nil {
 				return versionComparator{}, err
 			}

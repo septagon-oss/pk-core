@@ -8,8 +8,9 @@ package entity
 // Convention: C-14 (every Go file declares its purpose).
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/septagon-oss/pk-core/pkg/registry"
@@ -177,10 +178,7 @@ func (d Descriptor) RequiredPolicyTokens() []string {
 	if err != nil {
 		return nil
 	}
-	tokens := append([]string{}, normalized.Policy.Read...)
-	tokens = append(tokens, normalized.Policy.Write...)
-	tokens = append(tokens, normalized.Policy.Delete...)
-	return normalizeStrings(tokens)
+	return normalizeStrings(slices.Concat(normalized.Policy.Read, normalized.Policy.Write, normalized.Policy.Delete))
 }
 
 // OperationPolicy returns the policy tokens for a standard entity operation.
@@ -191,11 +189,11 @@ func (d Descriptor) OperationPolicy(operation string) []string {
 	}
 	switch strings.TrimSpace(operation) {
 	case "read":
-		return append([]string(nil), normalized.Policy.Read...)
+		return slices.Clone(normalized.Policy.Read)
 	case "write":
-		return append([]string(nil), normalized.Policy.Write...)
+		return slices.Clone(normalized.Policy.Write)
 	case "delete":
-		return append([]string(nil), normalized.Policy.Delete...)
+		return slices.Clone(normalized.Policy.Delete)
 	default:
 		return nil
 	}
@@ -272,7 +270,7 @@ func normalizeFields(fields []Field) ([]Field, error) {
 		seen[field.Name] = struct{}{}
 		out = append(out, field)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	slices.SortStableFunc(out, func(a, b Field) int { return cmp.Compare(a.Name, b.Name) })
 	return out, nil
 }
 
@@ -316,7 +314,7 @@ func normalizeRelationships(moduleID string, relationships []Relationship) ([]Re
 		seen[rel.Name] = struct{}{}
 		out = append(out, rel)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i].Name < out[j].Name })
+	slices.SortStableFunc(out, func(a, b Relationship) int { return cmp.Compare(a.Name, b.Name) })
 	return out, nil
 }
 
@@ -386,16 +384,11 @@ func normalizeCapabilities(capabilities []Capability) []Capability {
 }
 
 func sortCapabilities(capabilities []Capability) {
-	sort.SliceStable(capabilities, func(i, j int) bool { return capabilities[i] < capabilities[j] })
+	slices.Sort(capabilities)
 }
 
 func hasCapability(capabilities []Capability, want Capability) bool {
-	for _, capability := range capabilities {
-		if capability == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(capabilities, want)
 }
 
 func normalizePolicy(policy Policy) Policy {
@@ -420,7 +413,7 @@ func normalizeStrings(values []string) []string {
 		seen[value] = struct{}{}
 		out = append(out, value)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 

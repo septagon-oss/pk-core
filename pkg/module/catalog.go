@@ -9,7 +9,8 @@ package module
 import (
 	"errors"
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 )
 
@@ -40,8 +41,8 @@ type StaticBundle struct {
 func NewBundle(name string, entries []Entry, defaults []string) StaticBundle {
 	return StaticBundle{
 		name:     strings.TrimSpace(name),
-		entries:  append([]Entry(nil), entries...),
-		defaults: append([]string(nil), defaults...),
+		entries:  slices.Clone(entries),
+		defaults: slices.Clone(defaults),
 	}
 }
 
@@ -50,11 +51,11 @@ func (b StaticBundle) Name() string {
 }
 
 func (b StaticBundle) Entries() []Entry {
-	return append([]Entry(nil), b.entries...)
+	return slices.Clone(b.entries)
 }
 
 func (b StaticBundle) Defaults() []string {
-	return append([]string(nil), b.defaults...)
+	return slices.Clone(b.defaults)
 }
 
 // ConflictPolicy controls duplicate module IDs during catalog composition.
@@ -190,12 +191,7 @@ func (c *Catalog) ModuleIDs() []string {
 	if c == nil {
 		return nil
 	}
-	ids := make([]string, 0, len(c.entries))
-	for id := range c.entries {
-		ids = append(ids, id)
-	}
-	sort.Strings(ids)
-	return ids
+	return slices.Sorted(maps.Keys(c.entries))
 }
 
 // Defaults returns the bundle-declared default module IDs.
@@ -203,7 +199,7 @@ func (c *Catalog) Defaults() []string {
 	if c == nil {
 		return nil
 	}
-	return append([]string(nil), c.defaults...)
+	return slices.Clone(c.defaults)
 }
 
 // HasModule reports whether id is cataloged.

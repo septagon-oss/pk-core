@@ -7,7 +7,8 @@ package registry
 // Convention: C-14 (every Go file declares its purpose).
 
 import (
-	"sort"
+	"cmp"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -66,18 +67,18 @@ func (r *RuleRegistry[V]) Evaluate(input string) V {
 		r.mu.RUnlock()
 		r.mu.Lock()
 		if !r.sorted {
-			sort.SliceStable(r.rules, func(i, j int) bool {
-				if r.rules[i].rule.Priority != r.rules[j].rule.Priority {
-					return r.rules[i].rule.Priority > r.rules[j].rule.Priority
+			slices.SortStableFunc(r.rules, func(a, b registeredRule[V]) int {
+				if a.rule.Priority != b.rule.Priority {
+					return cmp.Compare(b.rule.Priority, a.rule.Priority)
 				}
-				return r.rules[i].order < r.rules[j].order
+				return cmp.Compare(a.order, b.order)
 			})
 			r.sorted = true
 		}
 		r.mu.Unlock()
 		r.mu.RLock()
 	}
-	rules := append([]registeredRule[V](nil), r.rules...)
+	rules := slices.Clone(r.rules)
 	fallback := r.fallback
 	r.mu.RUnlock()
 

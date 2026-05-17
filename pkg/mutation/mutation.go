@@ -8,9 +8,10 @@ package mutation
 // Convention: C-14 (every Go file declares its purpose).
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -221,7 +222,7 @@ func NewRuleGateWithOptions(rules []Rule, opts ...RuleGateOption) (*RuleGate, er
 		}
 		normalized = append(normalized, r)
 	}
-	sort.SliceStable(normalized, func(i, j int) bool { return normalized[i].ID < normalized[j].ID })
+	slices.SortStableFunc(normalized, func(a, b Rule) int { return cmp.Compare(a.ID, b.ID) })
 	gate.rules = normalized
 	return gate, nil
 }
@@ -349,17 +350,12 @@ func normalizeOperations(values []Operation) []Operation {
 		seen[value] = struct{}{}
 		out = append(out, value)
 	}
-	sort.SliceStable(out, func(i, j int) bool { return out[i] < out[j] })
+	slices.Sort(out)
 	return out
 }
 
 func containsOperation(values []Operation, want Operation) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func normalizeStrings(values []string) []string {
@@ -376,17 +372,12 @@ func normalizeStrings(values []string) []string {
 		seen[value] = struct{}{}
 		out = append(out, value)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 
 func containsString(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }
 
 func normalizeMap(values map[string]string) map[string]string {

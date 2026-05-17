@@ -100,6 +100,28 @@ func TestRegistryRangeUsesSnapshot(t *testing.T) {
 	}
 }
 
+func TestRegistrySeqUsesSnapshot(t *testing.T) {
+	r := New[string, int]()
+	r.Register("a", 1)
+	r.Register("b", 2)
+
+	seen := map[string]int{}
+	for key, value := range r.Seq() {
+		seen[key] = value
+		r.Register("c", 3)
+	}
+
+	if len(seen) != 2 {
+		t.Fatalf("Seq visited %d entries; want snapshot size 2", len(seen))
+	}
+	if seen["a"] != 1 || seen["b"] != 2 {
+		t.Fatalf("Seq snapshot = %v; want a=1 and b=2", seen)
+	}
+	if got := r.Len(); got != 3 {
+		t.Fatalf("Len after Seq callback registration = %d; want 3", got)
+	}
+}
+
 func TestSortedKeys(t *testing.T) {
 	r := New[string, int]()
 	r.Register("c", 3)

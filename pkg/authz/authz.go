@@ -8,9 +8,10 @@ package authz
 // Convention: C-14 (every Go file declares its purpose).
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -171,8 +172,8 @@ func NewPolicyEvaluator(policies ...Policy) (*PolicyEvaluator, error) {
 		}
 		normalized = append(normalized, p)
 	}
-	sort.SliceStable(normalized, func(i, j int) bool {
-		return normalized[i].ID < normalized[j].ID
+	slices.SortStableFunc(normalized, func(a, b Policy) int {
+		return cmp.Compare(a.ID, b.ID)
 	})
 	return &PolicyEvaluator{policies: normalized}, nil
 }
@@ -267,7 +268,7 @@ func normalizeList(values []string) []string {
 		seen[value] = struct{}{}
 		out = append(out, value)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out
 }
 

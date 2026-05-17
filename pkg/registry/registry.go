@@ -10,8 +10,10 @@ package registry
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"reflect"
-	"sort"
+	"slices"
 	"sync"
 )
 
@@ -163,11 +165,7 @@ func (r *Registry[K, V]) Keys() []K {
 	}
 	r.mu.RLock()
 	defer r.mu.RUnlock()
-	keys := make([]K, 0, len(r.entries))
-	for k := range r.entries {
-		keys = append(keys, k)
-	}
-	return keys
+	return slices.Collect(maps.Keys(r.entries))
 }
 
 // Len returns the number of entries.
@@ -193,14 +191,35 @@ func (r *Registry[K, V]) Range(fn func(K, V) bool) {
 	}
 }
 
+// Seq returns an iterator over a snapshot of the registry.
+func (r *Registry[K, V]) Seq() iter.Seq2[K, V] {
+	return func(yield func(K, V) bool) {
+		if r == nil {
+			return
+		}
+		for k, v := range r.All() {
+			if !yield(k, v) {
+				return
+			}
+		}
+	}
+}
+
 // SortedKeys returns keys sorted by less.
 func SortedKeys[K comparable, V any](r *Registry[K, V], less func(a, b K) bool) []K {
 	keys := r.Keys()
 	if less == nil {
 		return keys
 	}
-	sort.Slice(keys, func(i, j int) bool {
-		return less(keys[i], keys[j])
+	slices.SortFunc(keys, func(a, b K) int {
+		switch {
+		case less(a, b):
+			return -1
+		case less(b, a):
+			return 1
+		default:
+			return 0
+		}
 	})
 	return keys
 }

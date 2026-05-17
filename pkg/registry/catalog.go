@@ -8,7 +8,7 @@ package registry
 
 import (
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -205,14 +205,21 @@ func (b *CatalogBuilder[K, V]) Build() (*Catalog[K, V], error) {
 	}
 
 	if b.less != nil {
-		sort.SliceStable(order, func(i, j int) bool {
-			return b.less(order[i], order[j])
+		slices.SortStableFunc(order, func(left, right K) int {
+			switch {
+			case b.less(left, right):
+				return -1
+			case b.less(right, left):
+				return 1
+			default:
+				return 0
+			}
 		})
 	}
 
 	return &Catalog[K, V]{
 		entries:    entries,
-		keys:       append([]K(nil), order...),
+		keys:       slices.Clone(order),
 		normalizer: b.normalizer,
 		spec:       spec,
 		hasSpec:    hasSpec,
@@ -292,7 +299,7 @@ func (c *Catalog[K, V]) Keys() []K {
 	if c == nil {
 		return nil
 	}
-	return append([]K(nil), c.keys...)
+	return slices.Clone(c.keys)
 }
 
 // Entries returns contributions in builder order or WithCatalogKeyLess order.

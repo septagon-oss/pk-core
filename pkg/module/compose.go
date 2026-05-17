@@ -6,9 +6,10 @@ package module
 // Convention: C-10 (shared builders return errors), C-14 (file purpose declaration).
 
 import (
+	"cmp"
 	"fmt"
 	"reflect"
-	"sort"
+	"slices"
 	"strings"
 )
 
@@ -112,7 +113,7 @@ func Validate(modules []Composable) error {
 		}
 	}
 	if len(missing) > 0 {
-		sort.Strings(missing)
+		slices.Sort(missing)
 		return fmt.Errorf("module dependency validation failed:\n  - %s", strings.Join(missing, "\n  - "))
 	}
 	return nil
@@ -171,7 +172,7 @@ func Sort(modules []Composable) ([]Composable, error) {
 			queue = append(queue, id)
 		}
 	}
-	sort.Strings(queue)
+	slices.Sort(queue)
 
 	sorted := []Composable{}
 	for len(queue) > 0 {
@@ -180,12 +181,12 @@ func Sort(modules []Composable) ([]Composable, error) {
 		sorted = append(sorted, byID[current])
 
 		next := dependents[current]
-		sort.Strings(next)
+		slices.Sort(next)
 		for _, dependent := range next {
 			inDegree[dependent]--
 			if inDegree[dependent] == 0 {
 				queue = append(queue, dependent)
-				sort.Strings(queue)
+				slices.Sort(queue)
 			}
 		}
 	}
@@ -197,7 +198,7 @@ func Sort(modules []Composable) ([]Composable, error) {
 				cycle = append(cycle, id)
 			}
 		}
-		sort.Strings(cycle)
+		slices.Sort(cycle)
 		return nil, fmt.Errorf("module dependency cycle detected: %s", strings.Join(cycle, ", "))
 	}
 
@@ -235,7 +236,7 @@ func isNilComposable(module Composable) bool {
 	}
 	value := reflect.ValueOf(module)
 	switch value.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
 		return value.IsNil()
 	default:
 		return false
@@ -262,8 +263,8 @@ func providerIndex(refs []moduleRef) (map[string][]providedPort, error) {
 		}
 	}
 	for port := range providers {
-		sort.Slice(providers[port], func(i, j int) bool {
-			return providers[port][i].moduleID < providers[port][j].moduleID
+		slices.SortFunc(providers[port], func(a, b providedPort) int {
+			return cmp.Compare(a.moduleID, b.moduleID)
 		})
 	}
 	return providers, nil
@@ -284,7 +285,7 @@ func compatibleProviders(candidates []providedPort, constraint string) ([]string
 		}
 		out = append(out, candidate.moduleID)
 	}
-	sort.Strings(out)
+	slices.Sort(out)
 	return out, nil
 }
 
@@ -325,10 +326,5 @@ func matchingProviders(candidates, allowed []string) []string {
 }
 
 func contains(values []string, want string) bool {
-	for _, value := range values {
-		if value == want {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(values, want)
 }

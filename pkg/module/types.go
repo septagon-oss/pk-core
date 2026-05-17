@@ -11,6 +11,7 @@ package module
 import (
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 )
 
@@ -57,11 +58,7 @@ func PortOf[T any](version string) Port {
 }
 
 func portNameOf[T any](caller string) string {
-	var zero *T
-	t := reflect.TypeOf(zero)
-	if t == nil {
-		panic(caller + ": unresolved type parameter")
-	}
+	t := reflect.TypeFor[*T]()
 	elem := t.Elem()
 	if elem.Kind() != reflect.Interface {
 		panic(fmt.Sprintf("%s[%s]: T must be an interface", caller, elem.String()))
@@ -182,15 +179,15 @@ func (m *Module) Dependencies() []Dependency {
 }
 
 func (m *Module) Provides() []Port {
-	return append([]Port(nil), m.provides...)
+	return slices.Clone(m.provides)
 }
 
 func (m *Module) Providers() []any {
-	return append([]any(nil), m.providers...)
+	return slices.Clone(m.providers)
 }
 
 func (m *Module) Invocations() []any {
-	return append([]any(nil), m.invocations...)
+	return slices.Clone(m.invocations)
 }
 
 func copyDependencies(deps []Dependency) []Dependency {
@@ -200,7 +197,7 @@ func copyDependencies(deps []Dependency) []Dependency {
 	out := make([]Dependency, len(deps))
 	for i, dep := range deps {
 		out[i] = dep
-		out[i].FallbackProviders = append([]string(nil), dep.FallbackProviders...)
+		out[i].FallbackProviders = slices.Clone(dep.FallbackProviders)
 	}
 	return out
 }
