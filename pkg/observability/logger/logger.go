@@ -30,3 +30,8 @@ type Logger interface {
 	// Implementations may use this to short-circuit expensive arg construction.
 	Enabled(ctx context.Context, level slog.Level) bool
 }
+
+// ContextExtractor pulls log attrs from a context.Context. Implementations
+// typically read a tracing span, request ID, tenant ID, or other request-scoped
+// values and return them as slog-style alternating key/value pairs.
+type ContextExtractor func(ctx context.Context) []any

@@ -22,3 +22,4 @@ func (noopSpan) SetAttr(string, any)          {}
 func (noopSpan) SetStatus(StatusCode, string) {}
 func (noopSpan) RecordError(error)            {}
 func (noopSpan) End()                         {}
+func (noopSpan) Context() SpanContext         { return SpanContext{} }

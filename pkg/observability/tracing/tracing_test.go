@@ -82,3 +82,4 @@ func (*fakeSpan) SetAttr(string, any)                  {}
 func (*fakeSpan) SetStatus(tracing.StatusCode, string) {}
 func (*fakeSpan) RecordError(error)                    {}
 func (*fakeSpan) End()                                 {}
+func (*fakeSpan) Context() tracing.SpanContext         { return tracing.SpanContext{} }

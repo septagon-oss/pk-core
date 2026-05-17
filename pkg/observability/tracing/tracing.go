@@ -25,6 +25,16 @@ type Span interface {
 	SetStatus(code StatusCode, description string)
 	RecordError(err error)
 	End()
+
+	// Context returns the span's identity. Noop spans return zero SpanContext.
+	Context() SpanContext
+}
+
+// SpanContext identifies a span in adapter-neutral form. TraceID and SpanID
+// are W3C trace-context hex strings ("" if the span is a noop or untracked).
+type SpanContext struct {
+	TraceID string
+	SpanID  string
 }
 
 // Attr is an initial span attribute provided at Start.

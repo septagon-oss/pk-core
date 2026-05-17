@@ -56,3 +56,32 @@ func TestSlogLoggerHonorsLevel(t *testing.T) {
 		t.Fatalf("expected zero output, got %q", buf.String())
 	}
 }
+
+func TestSlogLoggerAppliesContextExtractors(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	extractor := func(_ context.Context) []any {
+		return []any{"request_id", "req-123", "tenant_id", "t1"}
+	}
+	l := logger.NewSlog(slog.NewJSONHandler(&buf, nil), extractor)
+	l.Info(context.Background(), "ping")
+	s := buf.String()
+	if !strings.Contains(s, `"request_id":"req-123"`) {
+		t.Fatalf("missing request_id: %s", s)
+	}
+	if !strings.Contains(s, `"tenant_id":"t1"`) {
+		t.Fatalf("missing tenant_id: %s", s)
+	}
+}
+
+func TestSlogLoggerExtractorAttrsPrecedeUserArgs(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	extractor := func(_ context.Context) []any { return []any{"injected", "yes"} }
+	l := logger.NewSlog(slog.NewJSONHandler(&buf, nil), extractor)
+	l.Info(context.Background(), "ping", "user_key", "user_val")
+	s := buf.String()
+	if !strings.Contains(s, `"injected":"yes"`) || !strings.Contains(s, `"user_key":"user_val"`) {
+		t.Fatalf("both attrs should be present: %s", s)
+	}
+}
