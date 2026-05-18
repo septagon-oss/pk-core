@@ -63,6 +63,10 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/security/authz",
 	"github.com/septagon-oss/pk-core/pkg/security/middlewarepolicy",
 	// security/* appended as they land
+	"github.com/septagon-oss/pk-core/pkg/resilience",
+	"github.com/septagon-oss/pk-core/pkg/resilience/retry",
+	"github.com/septagon-oss/pk-core/pkg/resilience/circuitbreaker",
+	"github.com/septagon-oss/pk-core/pkg/resilience/bulkhead",
 }
 
 func TestPkCoreImportsAreAllowed(t *testing.T) {
