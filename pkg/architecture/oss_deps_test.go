@@ -67,6 +67,9 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/resilience/retry",
 	"github.com/septagon-oss/pk-core/pkg/resilience/circuitbreaker",
 	"github.com/septagon-oss/pk-core/pkg/resilience/bulkhead",
+	"github.com/septagon-oss/pk-core/pkg/event",
+	"github.com/septagon-oss/pk-core/pkg/event/memory",
+	"github.com/septagon-oss/pk-core/pkg/event/outbox",
 }
 
 func TestPkCoreImportsAreAllowed(t *testing.T) {
