@@ -70,6 +70,10 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/event",
 	"github.com/septagon-oss/pk-core/pkg/event/memory",
 	"github.com/septagon-oss/pk-core/pkg/event/outbox",
+	"github.com/septagon-oss/pk-core/pkg/infrastructure/cache",
+	"github.com/septagon-oss/pk-core/pkg/infrastructure/database",
+	"github.com/septagon-oss/pk-core/pkg/infrastructure/router",
+	"github.com/septagon-oss/pk-core/pkg/infrastructure/config",
 }
 
 func TestPkCoreImportsAreAllowed(t *testing.T) {
