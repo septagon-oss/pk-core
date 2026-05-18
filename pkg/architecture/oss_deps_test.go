@@ -41,6 +41,7 @@ var pkCorePackages = []string{
 	"github.com/septagon-oss/pk-core/pkg/architecture",
 	"github.com/septagon-oss/pk-core/pkg/authz",
 	"github.com/septagon-oss/pk-core/pkg/entity",
+	"github.com/septagon-oss/pk-core/pkg/entity/crud",
 	"github.com/septagon-oss/pk-core/pkg/module",
 	"github.com/septagon-oss/pk-core/pkg/mutation",
 	"github.com/septagon-oss/pk-core/pkg/registry",
