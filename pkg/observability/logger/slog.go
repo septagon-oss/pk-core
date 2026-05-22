@@ -9,6 +9,9 @@ package logger
 import (
 	"context"
 	"log/slog"
+	"reflect"
+	"sort"
+	"strings"
 )
 
 type slogLogger struct {
@@ -40,19 +43,19 @@ func NewSlogFromLogger(l *slog.Logger, extractors ...ContextExtractor) Logger {
 }
 
 func (s *slogLogger) Debug(ctx context.Context, msg string, args ...any) {
-	s.inner.DebugContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.inner.DebugContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
 func (s *slogLogger) Info(ctx context.Context, msg string, args ...any) {
-	s.inner.InfoContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.inner.InfoContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
 func (s *slogLogger) Warn(ctx context.Context, msg string, args ...any) {
-	s.inner.WarnContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.inner.WarnContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
 func (s *slogLogger) Error(ctx context.Context, msg string, args ...any) {
-	s.inner.ErrorContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.inner.ErrorContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
 func (s *slogLogger) With(args ...any) Logger {
-	return &slogLogger{inner: s.inner.With(args...), extractors: s.extractors}
+	return &slogLogger{inner: s.inner.With(normalizeSlogArgs(args)...), extractors: s.extractors}
 }
 func (s *slogLogger) Enabled(ctx context.Context, level slog.Level) bool {
 	return s.inner.Enabled(ctx, level)
@@ -71,4 +74,70 @@ func (s *slogLogger) applyExtractors(ctx context.Context, args []any) []any {
 		out = append(out, ex(ctx)...)
 	}
 	return append(out, args...)
+}
+
+// normalizeSlogArgs accepts both slog-native key/value args and the legacy
+// logger.Fields-style single map argument used by older PlatformKit packages.
+// Without this normalization slog records that map as !BADKEY and discards the
+// structured context operators need during incidents.
+func normalizeSlogArgs(args []any) []any {
+	if len(args) == 0 {
+		return args
+	}
+
+	out := make([]any, 0, len(args))
+	for index := 0; index < len(args); index++ {
+		arg := args[index]
+		if attr, ok := arg.(slog.Attr); ok {
+			attr.Key = normalizeSlogKey(attr.Key)
+			out = append(out, attr)
+			continue
+		}
+		if flattened, ok := flattenStringMapArg(arg); ok {
+			out = append(out, flattened...)
+			continue
+		}
+		key, ok := arg.(string)
+		if !ok {
+			out = append(out, "arg", arg)
+			continue
+		}
+		key = normalizeSlogKey(key)
+		if index+1 >= len(args) {
+			out = append(out, key, "")
+			continue
+		}
+		out = append(out, key, args[index+1])
+		index++
+	}
+	return out
+}
+
+func flattenStringMapArg(arg any) ([]any, bool) {
+	if arg == nil {
+		return nil, false
+	}
+	value := reflect.ValueOf(arg)
+	if value.Kind() != reflect.Map || value.Type().Key().Kind() != reflect.String {
+		return nil, false
+	}
+
+	keys := value.MapKeys()
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].String() < keys[j].String()
+	})
+
+	out := make([]any, 0, len(keys)*2)
+	for _, key := range keys {
+		out = append(out, normalizeSlogKey(key.String()), value.MapIndex(key).Interface())
+	}
+	return out, true
+}
+
+func normalizeSlogKey(key string) string {
+	trimmed := strings.TrimSpace(key)
+	if trimmed == "" || trimmed == "!BADKEY" {
+		return "arg"
+	}
+	return trimmed
 }
