@@ -22,12 +22,18 @@ const Standard = "platformkit.guardrail.v1"
 // Mode classifies why a guardrail warning was emitted.
 type Mode string
 
+// Recognized guardrail modes.
 const (
-	ModeFallback         Mode = "fallback"
-	ModeDegraded         Mode = "degraded"
-	ModeUnsupported      Mode = "unsupported"
+	// ModeFallback indicates a safe fallback path was taken.
+	ModeFallback Mode = "fallback"
+	// ModeDegraded indicates execution continued in a degraded state.
+	ModeDegraded Mode = "degraded"
+	// ModeUnsupported indicates an unsupported configuration or operation.
+	ModeUnsupported Mode = "unsupported"
+	// ModeConfigurationGap indicates a missing or incomplete configuration.
 	ModeConfigurationGap Mode = "configuration_gap"
-	ModeSoftEmpty        Mode = "soft_empty"
+	// ModeSoftEmpty indicates an empty result was returned in place of an error.
+	ModeSoftEmpty Mode = "soft_empty"
 )
 
 // Warn emits a standardized guardrail warning. extraArgs follow the slog

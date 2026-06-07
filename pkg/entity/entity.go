@@ -19,15 +19,25 @@ import (
 // FieldType describes a platform-neutral field shape.
 type FieldType string
 
+// Supported platform-neutral field types.
 const (
-	FieldString   FieldType = "string"
-	FieldText     FieldType = "text"
-	FieldBoolean  FieldType = "boolean"
-	FieldInteger  FieldType = "integer"
-	FieldNumber   FieldType = "number"
+	// FieldString is a short single-line string value.
+	FieldString FieldType = "string"
+	// FieldText is a long multi-line text value.
+	FieldText FieldType = "text"
+	// FieldBoolean is a true/false value.
+	FieldBoolean FieldType = "boolean"
+	// FieldInteger is a whole-number value.
+	FieldInteger FieldType = "integer"
+	// FieldNumber is a floating-point numeric value.
+	FieldNumber FieldType = "number"
+	// FieldDateTime is a timestamp value.
 	FieldDateTime FieldType = "datetime"
-	FieldEnum     FieldType = "enum"
-	FieldJSON     FieldType = "json"
+	// FieldEnum is a value constrained to a fixed set of EnumValues.
+	FieldEnum FieldType = "enum"
+	// FieldJSON is an arbitrary structured JSON value.
+	FieldJSON FieldType = "json"
+	// FieldRelation references another entity.
 	FieldRelation FieldType = "relation"
 )
 
@@ -38,21 +48,32 @@ const ExtensionPrefix = "x."
 // Capability describes a reusable entity capability.
 type Capability string
 
+// Reusable entity capabilities.
 const (
-	CapabilityReadable     Capability = "readable"
-	CapabilityWritable     Capability = "writable"
-	CapabilityListable     Capability = "listable"
-	CapabilityQueryable    Capability = "queryable"
-	CapabilityAudited      Capability = "audited"
+	// CapabilityReadable indicates the entity supports read access.
+	CapabilityReadable Capability = "readable"
+	// CapabilityWritable indicates the entity supports create and update.
+	CapabilityWritable Capability = "writable"
+	// CapabilityListable indicates the entity supports list retrieval.
+	CapabilityListable Capability = "listable"
+	// CapabilityQueryable indicates the entity supports filtered queries.
+	CapabilityQueryable Capability = "queryable"
+	// CapabilityAudited indicates entity changes are audited.
+	CapabilityAudited Capability = "audited"
+	// CapabilityTenantScoped indicates entity rows are isolated per tenant.
 	CapabilityTenantScoped Capability = "tenant_scoped"
 )
 
 // RelationshipKind describes a relationship cardinality.
 type RelationshipKind string
 
+// Supported relationship cardinalities.
 const (
-	RelationshipOne     RelationshipKind = "one"
-	RelationshipMany    RelationshipKind = "many"
+	// RelationshipOne is a to-one relationship.
+	RelationshipOne RelationshipKind = "one"
+	// RelationshipMany is a to-many relationship.
+	RelationshipMany RelationshipKind = "many"
+	// RelationshipBelongs is an owning belongs-to relationship.
 	RelationshipBelongs RelationshipKind = "belongs_to"
 )
 
@@ -115,6 +136,7 @@ type Key struct {
 	Entity   string
 }
 
+// String returns the "moduleID:entity" representation of the key.
 func (k Key) String() string {
 	return strings.TrimSpace(k.ModuleID) + ":" + strings.TrimSpace(k.Entity)
 }

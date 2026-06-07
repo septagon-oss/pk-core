@@ -131,6 +131,9 @@ func New(metadata Metadata, opts ...Option) (*Module, error) {
 }
 
 // Must constructs a Module and panics on invalid metadata.
+//
+// Panics if New returns an error (for example, metadata with an empty ID or an
+// ID containing whitespace). Use New to handle invalid metadata as an error.
 func Must(metadata Metadata, opts ...Option) *Module {
 	m, err := New(metadata, opts...)
 	if err != nil {
@@ -170,22 +173,27 @@ func WithInvocations(invocations ...any) Option {
 	}
 }
 
+// Metadata returns the module's identifying metadata.
 func (m *Module) Metadata() Metadata {
 	return m.metadata
 }
 
+// Dependencies returns a copy of the module's declared port dependencies.
 func (m *Module) Dependencies() []Dependency {
 	return copyDependencies(m.dependencies)
 }
 
+// Provides returns a copy of the ports the module provides.
 func (m *Module) Provides() []Port {
 	return slices.Clone(m.provides)
 }
 
+// Providers returns a copy of the module's dependency-injection provider values.
 func (m *Module) Providers() []any {
 	return slices.Clone(m.providers)
 }
 
+// Invocations returns a copy of the module's dependency-injection invocation values.
 func (m *Module) Invocations() []any {
 	return slices.Clone(m.invocations)
 }

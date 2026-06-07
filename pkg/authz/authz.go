@@ -18,18 +18,27 @@ import (
 // Effect is the outcome a policy can declare.
 type Effect string
 
+// Effect values declared by a policy.
 const (
+	// EffectAllow grants access when the policy matches.
 	EffectAllow Effect = "allow"
-	EffectDeny  Effect = "deny"
+	// EffectDeny refuses access when the policy matches.
+	EffectDeny Effect = "deny"
 )
 
 // Decision is the result of evaluating a request.
 type Decision string
 
+// Decision values returned by an Evaluator.
 const (
-	DecisionAllow        Decision = "allow"
-	DecisionDeny         Decision = "deny"
-	DecisionAbstain      Decision = "abstain"
+	// DecisionAllow reports that the request is permitted.
+	DecisionAllow Decision = "allow"
+	// DecisionDeny reports that the request is refused.
+	DecisionDeny Decision = "deny"
+	// DecisionAbstain reports that no policy matched, deferring the outcome.
+	DecisionAbstain Decision = "abstain"
+	// DecisionNotEvaluated reports that no evaluation took place (e.g. nil or
+	// unconfigured evaluator).
 	DecisionNotEvaluated Decision = "not_evaluated"
 )
 

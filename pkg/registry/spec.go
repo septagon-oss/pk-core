@@ -14,14 +14,22 @@ import (
 // OwnerLayer identifies the layer that owns a registry's semantics.
 type OwnerLayer string
 
+// Recognized registry owner layers.
 const (
-	OwnerCore    OwnerLayer = "core"
-	OwnerModule  OwnerLayer = "module"
-	OwnerDesign  OwnerLayer = "design"
-	OwnerClient  OwnerLayer = "client"
-	OwnerTools   OwnerLayer = "tools"
+	// OwnerCore marks a registry owned by the core framework.
+	OwnerCore OwnerLayer = "core"
+	// OwnerModule marks a registry owned by a business module.
+	OwnerModule OwnerLayer = "module"
+	// OwnerDesign marks a registry owned by the design system.
+	OwnerDesign OwnerLayer = "design"
+	// OwnerClient marks a registry owned by client-specific code.
+	OwnerClient OwnerLayer = "client"
+	// OwnerTools marks a registry owned by developer tooling.
+	OwnerTools OwnerLayer = "tools"
+	// OwnerRuntime marks a registry owned by the runtime layer.
 	OwnerRuntime OwnerLayer = "runtime"
-	OwnerPro     OwnerLayer = "pro"
+	// OwnerPro marks a registry owned by the commercial Pro layer.
+	OwnerPro OwnerLayer = "pro"
 )
 
 // Spec describes a registry contract without coupling core to the registry's
@@ -109,20 +117,29 @@ func validOwnerLayer(owner OwnerLayer) bool {
 // Severity classifies a registry diagnostic.
 type Severity string
 
+// Diagnostic severities.
 const (
-	SeverityError   Severity = "error"
+	// SeverityError marks a diagnostic that fails validation.
+	SeverityError Severity = "error"
+	// SeverityWarning marks a non-fatal advisory diagnostic.
 	SeverityWarning Severity = "warning"
 )
 
 // Code identifies a machine-readable registry diagnostic class.
 type Code string
 
+// Registry diagnostic codes.
 const (
-	CodeInvalidSpec           Code = "invalid_spec"
+	// CodeInvalidSpec indicates the registry Spec failed validation.
+	CodeInvalidSpec Code = "invalid_spec"
+	// CodeInvalidConflictPolicy indicates an unknown conflict policy was configured.
 	CodeInvalidConflictPolicy Code = "invalid_conflict_policy"
-	CodeInvalidKey            Code = "invalid_key"
-	CodeInvalidValue          Code = "invalid_value"
-	CodeDuplicateKey          Code = "duplicate_key"
+	// CodeInvalidKey indicates a contribution key failed validation.
+	CodeInvalidKey Code = "invalid_key"
+	// CodeInvalidValue indicates a contribution value failed validation.
+	CodeInvalidValue Code = "invalid_value"
+	// CodeDuplicateKey indicates two contributions shared the same key.
+	CodeDuplicateKey Code = "duplicate_key"
 )
 
 // Diagnostic is a structured validation message emitted by registry builders.

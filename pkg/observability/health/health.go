@@ -21,10 +21,13 @@ type Status string
 // The default registrar in this package emits only StatusHealthy and
 // StatusUnhealthy. StatusDegraded is reserved for custom registrars and
 // adapter implementations that distinguish partial-failure conditions; the
-// wire format is fixed in v0.0.0 so consumers can rely on it.
+// wire format is fixed in v0.1.0 so consumers can rely on it.
 const (
-	StatusHealthy   Status = "healthy"
-	StatusDegraded  Status = "degraded"
+	// StatusHealthy reports that all components are operating normally.
+	StatusHealthy Status = "healthy"
+	// StatusDegraded reports partial impairment; reserved for custom registrars.
+	StatusDegraded Status = "degraded"
+	// StatusUnhealthy reports that at least one component has failed.
 	StatusUnhealthy Status = "unhealthy"
 )
 

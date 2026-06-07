@@ -7,7 +7,7 @@ package architecture_test
 //   - any other pk-core package
 //   - any module in the AllowedExternalDeps whitelist below
 //
-// Anything else is a v0.0.0 contract violation. The whitelist exists because a
+// Anything else is a v0.1.0 contract violation. The whitelist exists because a
 // handful of cryptographic and crypto-adjacent operations (bcrypt, argon2id)
 // cannot be implemented from stdlib alone, and `golang.org/x/crypto` is the
 // Go-team-maintained, security-audited canonical source.

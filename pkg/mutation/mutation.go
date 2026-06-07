@@ -22,20 +22,29 @@ import (
 // Operation is the coarse mutation verb.
 type Operation string
 
+// Recognized mutation operations.
 const (
+	// OperationCreate creates a new entity.
 	OperationCreate Operation = "create"
+	// OperationUpdate updates an existing entity.
 	OperationUpdate Operation = "update"
+	// OperationDelete removes an existing entity.
 	OperationDelete Operation = "delete"
+	// OperationCustom is a module-defined operation.
 	OperationCustom Operation = "custom"
 )
 
 // GateDecision describes how a mutation should proceed.
 type GateDecision string
 
+// Possible gate decisions for a mutation.
 const (
-	GateAllow          GateDecision = "allow"
+	// GateAllow permits the mutation to proceed immediately.
+	GateAllow GateDecision = "allow"
+	// GateRequiresReview routes the mutation through a review workflow.
 	GateRequiresReview GateDecision = "requires_review"
-	GateDeny           GateDecision = "deny"
+	// GateDeny refuses the mutation.
+	GateDeny GateDecision = "deny"
 )
 
 // Intent is the stable request shape for a governed mutation.
@@ -287,6 +296,7 @@ type Key struct {
 	RuleID   string
 }
 
+// String returns the "moduleID:entity:ruleID" representation of the key.
 func (k Key) String() string {
 	return strings.TrimSpace(k.ModuleID) + ":" + strings.TrimSpace(k.Entity) + ":" + strings.TrimSpace(k.RuleID)
 }

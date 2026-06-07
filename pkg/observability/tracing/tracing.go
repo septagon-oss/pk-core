@@ -21,9 +21,13 @@ type Tracer interface {
 
 // Span is an in-flight operation record.
 type Span interface {
+	// SetAttr attaches a key/value attribute to the span.
 	SetAttr(key string, value any)
+	// SetStatus sets the span's final status code and a human-readable description.
 	SetStatus(code StatusCode, description string)
+	// RecordError records err as an event on the span.
 	RecordError(err error)
+	// End completes the span. It must be called exactly once.
 	End()
 
 	// Context returns the span's identity. Noop spans return zero SpanContext.
@@ -46,9 +50,13 @@ type Attr struct {
 // StatusCode describes a span's final status.
 type StatusCode int
 
+// Span status codes.
 const (
+	// StatusUnset is the default status before one is explicitly set.
 	StatusUnset StatusCode = iota
+	// StatusOK marks the span as completed successfully.
 	StatusOK
+	// StatusError marks the span as failed.
 	StatusError
 )
 

@@ -11,7 +11,7 @@ blocks, not product workflows or private implementation shortcuts.
 Run it with:
 
 ```bash
-make fitness
+make verify
 ```
 
 The executable fitness check lives in `pkg/architecture`. It verifies that:

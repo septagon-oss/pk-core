@@ -46,14 +46,17 @@ func NewBundle(name string, entries []Entry, defaults []string) StaticBundle {
 	}
 }
 
+// Name returns the bundle's name.
 func (b StaticBundle) Name() string {
 	return b.name
 }
 
+// Entries returns a copy of the bundle's module entries.
 func (b StaticBundle) Entries() []Entry {
 	return slices.Clone(b.entries)
 }
 
+// Defaults returns a copy of the bundle's default module IDs.
 func (b StaticBundle) Defaults() []string {
 	return slices.Clone(b.defaults)
 }
@@ -61,9 +64,13 @@ func (b StaticBundle) Defaults() []string {
 // ConflictPolicy controls duplicate module IDs during catalog composition.
 type ConflictPolicy int
 
+// Conflict policies for duplicate module IDs during composition.
 const (
+	// ConflictReject fails the build when two bundles contribute the same ID.
 	ConflictReject ConflictPolicy = iota
+	// ConflictFirstWins keeps the first contribution and ignores later ones.
 	ConflictFirstWins
+	// ConflictLastWins lets later contributions overwrite earlier ones.
 	ConflictLastWins
 )
 
@@ -178,6 +185,10 @@ func (b *CatalogBuilder) Build() (*Catalog, error) {
 }
 
 // MustBuild resolves the catalog or panics.
+//
+// Panics if Build returns an error (for example, a bundle with an empty name,
+// an entry with an empty ID or nil constructor, or a duplicate module ID under
+// the ConflictReject policy). Use Build to handle these conditions as errors.
 func (b *CatalogBuilder) MustBuild() *Catalog {
 	catalog, err := b.Build()
 	if err != nil {

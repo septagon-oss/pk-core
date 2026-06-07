@@ -37,7 +37,7 @@ Pro/private distributions should avoid privately redefining:
 When those contracts need to change, change OSS first and let downstream
 distributions consume the new public tag.
 
-Before changing any of these contracts, run `make fitness` and update
+Before changing any of these contracts, run `make verify` and update
 `docs/EXTENSIBILITY_FITNESS.md` if the intended extension model changes. The
 fitness check is the guardrail that keeps downstream extensions using the same
 public extension points as community modules.

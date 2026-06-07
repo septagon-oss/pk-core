@@ -15,14 +15,22 @@ import (
 // DependencyCategory defines the broad kind of port dependency a module has.
 type DependencyCategory string
 
+// Recognized dependency categories.
 const (
+	// DependencyCategoryInfrastructure covers platform infrastructure ports.
 	DependencyCategoryInfrastructure DependencyCategory = "infrastructure"
-	DependencyCategoryBusiness       DependencyCategory = "business"
-	DependencyCategoryUI             DependencyCategory = "ui"
-	DependencyCategorySecurity       DependencyCategory = "security"
-	DependencyCategoryMonitoring     DependencyCategory = "monitoring"
-	DependencyCategoryData           DependencyCategory = "data"
-	DependencyCategoryUnknown        DependencyCategory = "unknown"
+	// DependencyCategoryBusiness covers business-domain ports.
+	DependencyCategoryBusiness DependencyCategory = "business"
+	// DependencyCategoryUI covers user-interface ports.
+	DependencyCategoryUI DependencyCategory = "ui"
+	// DependencyCategorySecurity covers security and authorization ports.
+	DependencyCategorySecurity DependencyCategory = "security"
+	// DependencyCategoryMonitoring covers observability and monitoring ports.
+	DependencyCategoryMonitoring DependencyCategory = "monitoring"
+	// DependencyCategoryData covers data and persistence ports.
+	DependencyCategoryData DependencyCategory = "data"
+	// DependencyCategoryUnknown is the default when no category is declared.
+	DependencyCategoryUnknown DependencyCategory = "unknown"
 )
 
 // PortSpec is the human-authored part of a dependency declaration.

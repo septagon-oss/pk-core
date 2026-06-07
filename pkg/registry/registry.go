@@ -78,6 +78,7 @@ type ErrAlreadyRegistered[K comparable] struct {
 	Key K
 }
 
+// Error implements the error interface and reports the duplicate key.
 func (e ErrAlreadyRegistered[K]) Error() string {
 	return fmt.Sprintf("registry: key %v already registered", e.Key)
 }

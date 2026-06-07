@@ -227,6 +227,10 @@ func (b *CatalogBuilder[K, V]) Build() (*Catalog[K, V], error) {
 }
 
 // MustBuild returns Build's catalog or panics.
+//
+// Panics if Build returns an error (for example, an invalid Spec, an invalid
+// conflict policy, a key or value that fails its validator, or a duplicate key
+// under the ConflictReject policy). Use Build to handle these as errors.
 func (b *CatalogBuilder[K, V]) MustBuild() *Catalog[K, V] {
 	catalog, err := b.Build()
 	if err != nil {

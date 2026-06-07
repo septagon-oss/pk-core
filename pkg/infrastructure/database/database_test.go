@@ -12,6 +12,7 @@ import (
 	"database/sql/driver"
 	"errors"
 	"io"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -31,18 +32,42 @@ type mockDriver struct{}
 // shared global state across mockConn instances. atomic so the -race
 // detector stays clean across goroutines (sql.DB pools may dial from
 // any goroutine).
+//
+// The ping-error override is keyed by DSN rather than process-global so
+// parallel tests using distinct DSNs cannot observe each other's override.
 var (
 	mockOpenCount  atomic.Int32
 	mockCloseCount atomic.Int32
-	mockPingErr    atomic.Pointer[error]
+
+	mockPingErrMu sync.RWMutex
+	mockPingErrs  = map[string]error{}
 )
+
+// setMockPingErr installs (or clears, when err is nil) a ping error for the
+// given DSN.
+func setMockPingErr(dsn string, err error) {
+	mockPingErrMu.Lock()
+	defer mockPingErrMu.Unlock()
+	if err == nil {
+		delete(mockPingErrs, dsn)
+		return
+	}
+	mockPingErrs[dsn] = err
+}
+
+func mockPingErrFor(dsn string) error {
+	mockPingErrMu.RLock()
+	defer mockPingErrMu.RUnlock()
+	return mockPingErrs[dsn]
+}
 
 func (mockDriver) Open(name string) (driver.Conn, error) {
 	mockOpenCount.Add(1)
-	return &mockConn{}, nil
+	return &mockConn{dsn: name}, nil
 }
 
 type mockConn struct {
+	dsn    string
 	closed bool
 }
 
@@ -62,8 +87,8 @@ func (m *mockConn) Begin() (driver.Tx, error) {
 
 // Ping satisfies driver.Pinger so sql.DB.PingContext routes here.
 func (m *mockConn) Ping(ctx context.Context) error {
-	if errPtr := mockPingErr.Load(); errPtr != nil && *errPtr != nil {
-		return *errPtr
+	if err := mockPingErrFor(m.dsn); err != nil {
+		return err
 	}
 	if m.closed {
 		return io.ErrClosedPipe
@@ -87,7 +112,7 @@ func TestOpenInvalidDriverErrors(t *testing.T) {
 
 func TestDBReturnsUnderlyingHandle(t *testing.T) {
 	t.Parallel()
-	db, err := database.Open("pkcoremockdb", "ignored")
+	db, err := database.Open("pkcoremockdb", "dsn-handle")
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
@@ -105,14 +130,11 @@ func TestDBReturnsUnderlyingHandle(t *testing.T) {
 
 func TestPing(t *testing.T) {
 	t.Parallel()
-	db, err := database.Open("pkcoremockdb", "ignored")
+	db, err := database.Open("pkcoremockdb", "dsn-ping")
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-
-	// Clear any prior ping override.
-	mockPingErr.Store(nil)
 
 	if err := db.Ping(context.Background()); err != nil {
 		t.Fatalf("Ping: %v", err)
@@ -121,7 +143,7 @@ func TestPing(t *testing.T) {
 
 func TestClose(t *testing.T) {
 	t.Parallel()
-	db, err := database.Open("pkcoremockdb", "ignored")
+	db, err := database.Open("pkcoremockdb", "dsn-close")
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
@@ -141,7 +163,7 @@ func TestClose(t *testing.T) {
 func TestOptionsApply(t *testing.T) {
 	t.Parallel()
 	db, err := database.Open(
-		"pkcoremockdb", "ignored",
+		"pkcoremockdb", "dsn-options",
 		database.WithMaxOpenConns(7),
 		database.WithMaxIdleConns(3),
 		database.WithConnMaxLifetime(42*time.Second),
@@ -166,17 +188,17 @@ func TestOptionsApply(t *testing.T) {
 
 func TestPingPropagatesDriverError(t *testing.T) {
 	t.Parallel()
-	db, err := database.Open("pkcoremockdb", "ignored")
+	const dsn = "dsn-ping-error"
+	db, err := database.Open("pkcoremockdb", dsn)
 	if err != nil {
 		t.Fatalf("Open: %v", err)
 	}
 	t.Cleanup(func() {
-		mockPingErr.Store(nil)
+		setMockPingErr(dsn, nil)
 		_ = db.Close()
 	})
 
-	want := errors.New("ping failed")
-	mockPingErr.Store(&want)
+	setMockPingErr(dsn, errors.New("ping failed"))
 	err = db.Ping(context.Background())
 	if err == nil {
 		t.Fatal("Ping: nil error when driver reports failure")
