@@ -30,38 +30,38 @@ import (
 	"github.com/septagon-oss/pk-core/pkg/module"
 )
 
-// Notifier is a port: the contract one module provides and another consumes,
-// without either importing the other's package.
-type Notifier interface {
-	Notify(message string) error
+// AuditService is a port: the contract one module provides and another
+// consumes, without either importing the other's package.
+type AuditService interface {
+	Record(message string) error
 }
 
 func main() {
-	notifications := module.NewBundle("example.notifications", []module.Entry{
-		{ID: "notifications", New: func() module.Composable {
+	audit := module.NewBundle("example.audit", []module.Entry{
+		{ID: "audit", New: func() module.Composable {
 			return module.Must(
-				module.Metadata{ID: "notifications", Name: "Notifications"},
-				module.WithProvides(module.Provide[Notifier]("1.0.0")),
+				module.Metadata{ID: "audit", Name: "Audit"},
+				module.WithProvides(module.Provide[AuditService]("1.0.0")),
 			)
 		}},
-	}, []string{"notifications"})
+	}, []string{"audit"})
 
 	content := module.NewBundle("example.content", []module.Entry{
 		{ID: "content", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "content", Name: "Content"},
-				module.WithDependencies(module.Require[Notifier](module.DependencySpec{
+				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
 					Version:           "1.0.0",
-					Purpose:           "notify subscribers on publish",
-					PreferredProvider: "notifications",
+					Purpose:           "audit content publication",
+					PreferredProvider: "audit",
 				})),
 			)
 		}},
 	}, []string{"content"})
 
-	// Compose validates the required Notifier dependency and returns the
+	// Compose validates the required AuditService dependency and returns the
 	// modules in dependency order (provider before consumer).
-	catalog := module.NewCatalog().Add(content).Add(notifications).MustBuild()
+	catalog := module.NewCatalog().Add(content).Add(audit).MustBuild()
 	plan, err := module.Compose(catalog)
 	if err != nil {
 		log.Fatal(err)
