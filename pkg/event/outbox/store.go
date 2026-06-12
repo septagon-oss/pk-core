@@ -11,6 +11,7 @@ package outbox
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/septagon-oss/pk-core/pkg/event"
 )
@@ -59,9 +60,10 @@ type Store interface {
 	Save(ctx context.Context, env event.Envelope) error
 
 	// NextBatch returns up to limit entries that have not yet been
-	// successfully delivered. Implementations decide their own claim
-	// semantics (lock, lease, simple read); the dispatcher calls
-	// MarkDelivered or MarkFailed before requesting the next batch.
+	// successfully delivered. NextBatch performs NO claiming — two
+	// dispatchers calling it concurrently will both receive the same
+	// entries and double-deliver. Multi-dispatcher deployments need a
+	// ClaimingStore.
 	NextBatch(ctx context.Context, limit int) ([]PendingEntry, error)
 
 	// MarkDelivered records successful delivery of envelopeID.
@@ -72,4 +74,29 @@ type Store interface {
 	// Implementations MUST increment the attempts counter and leave the
 	// entry available for the next NextBatch call.
 	MarkFailed(ctx context.Context, envelopeID string, errMsg string) error
+}
+
+// ClaimingStore is the optional Store capability that makes concurrent
+// dispatchers safe (ADR-0049 D6). ClaimBatch atomically reserves the
+// entries it returns: until ttl elapses no other ClaimBatch call may
+// return them, so each entry is delivered by exactly one dispatcher per
+// claim window. A dispatcher that crashes mid-delivery implicitly
+// releases its claims when the ttl expires.
+//
+// Both built-in stores implement it. The Outbox dispatcher prefers
+// ClaimBatch when the store supports it and falls back to NextBatch
+// (single-dispatcher semantics) otherwise.
+type ClaimingStore interface {
+	Store
+	ClaimBatch(ctx context.Context, limit int, ttl time.Duration) ([]PendingEntry, error)
+}
+
+// DeadLetterStore is the optional Store capability for terminal parking
+// (ADR-0049 D6). MarkDead removes envelopeID from the pending queue
+// permanently while preserving the entry and errMsg for operator
+// inspection and replay — unlike the legacy max-retries path, which
+// marked exhausted entries delivered and lost the distinction.
+type DeadLetterStore interface {
+	Store
+	MarkDead(ctx context.Context, envelopeID string, errMsg string) error
 }
