@@ -7,8 +7,10 @@ package tracing
 
 import "context"
 
-type noopTracer struct{}
-type noopSpan struct{}
+type (
+	noopTracer struct{}
+	noopSpan   struct{}
+)
 
 // Noop returns a Tracer whose spans record nothing.
 func Noop() Tracer { return noopTracer{} }

@@ -105,9 +105,11 @@ func (e *expvarMetrics) float(name string) *expvar.Float {
 	return f
 }
 
-type expvarCounter struct{ f *expvar.Float }
-type expvarGauge struct{ f *expvar.Float }
-type expvarHistogram struct{ sum, count *expvar.Float }
+type (
+	expvarCounter   struct{ f *expvar.Float }
+	expvarGauge     struct{ f *expvar.Float }
+	expvarHistogram struct{ sum, count *expvar.Float }
+)
 
 func (c *expvarCounter) Add(delta float64) { c.f.Add(delta) }
 func (g *expvarGauge) Set(value float64)   { g.f.Set(value) }

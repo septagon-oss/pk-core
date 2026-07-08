@@ -28,6 +28,7 @@ func (c *captureLogger) With(...any) logger.Logger             { return c }
 func (c *captureLogger) Enabled(context.Context, slog.Level) bool {
 	return true
 }
+
 func (c *captureLogger) Warn(_ context.Context, message string, args ...any) {
 	c.gotMessage = message
 	c.gotArgs = args
@@ -36,7 +37,8 @@ func (c *captureLogger) Warn(_ context.Context, message string, args ...any) {
 func TestWarnFallbackAddsMetadata(t *testing.T) {
 	t.Parallel()
 	log := &captureLogger{}
-	guardrail.WarnFallback(context.Background(), log,
+	guardrail.WarnFallback(
+		context.Background(), log,
 		"auth.lookup_email_fallback",
 		"falling back to email lookup",
 		"tenant_id", "t1",

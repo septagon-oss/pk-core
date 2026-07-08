@@ -74,7 +74,8 @@ func TestConcurrentDispatchersDeliverExactlyOnce(t *testing.T) {
 	}
 
 	mk := func() *outbox.Outbox {
-		return outbox.New(bus, store,
+		return outbox.New(
+			bus, store,
 			outbox.WithDispatchInterval(time.Millisecond),
 			outbox.WithBatchSize(8),
 			outbox.WithClaimTTL(5*time.Second),
@@ -126,7 +127,8 @@ func TestPoisonEnvelopeDeadLetters(t *testing.T) {
 		t.Fatalf("save healthy: %v", err)
 	}
 
-	ob := outbox.New(bus, store,
+	ob := outbox.New(
+		bus, store,
 		outbox.WithDispatchInterval(time.Millisecond),
 		outbox.WithMaxRetries(3),
 		outbox.WithErrorHandler(handler),
@@ -214,7 +216,8 @@ func TestErrorHandlerObservesPublishFailures(t *testing.T) {
 	if err := store.Save(ctx, newEnv("evt-f", "fail.type")); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	ob := outbox.New(bus, store,
+	ob := outbox.New(
+		bus, store,
 		outbox.WithDispatchInterval(time.Millisecond),
 		outbox.WithErrorHandler(handler),
 	)
@@ -281,7 +284,8 @@ func TestFirstClaimFailureDowngradesToNextBatch(t *testing.T) {
 	if err := store.Save(ctx, newEnv("evt-1", "e")); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	ob := outbox.New(bus, store,
+	ob := outbox.New(
+		bus, store,
 		outbox.WithDispatchInterval(time.Millisecond),
 		outbox.WithErrorHandler(handler),
 	)
@@ -313,7 +317,8 @@ func TestTransientClaimFailureStallsInsteadOfDowngrading(t *testing.T) {
 	if err := store.Save(ctx, newEnv("evt-1", "e")); err != nil {
 		t.Fatalf("save: %v", err)
 	}
-	ob := outbox.New(bus, store,
+	ob := outbox.New(
+		bus, store,
 		outbox.WithDispatchInterval(time.Millisecond),
 		outbox.WithClaimTTL(20*time.Millisecond),
 	)

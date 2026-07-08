@@ -245,7 +245,8 @@ func TestSortFailsOnInvalidProviderVersion(t *testing.T) {
 		Name:    module.PortOf[AuditService]("").Name,
 		Version: "not-semver",
 	}))
-	content := module.Must(module.Metadata{ID: "content"},
+	content := module.Must(
+		module.Metadata{ID: "content"},
 		module.WithDependencies(module.Require[AuditService](module.DependencySpec{Version: ">=1.0.0"})),
 	)
 
@@ -261,7 +262,8 @@ func TestSortFailsOnInvalidProviderVersion(t *testing.T) {
 func TestValidateRejectsInvalidDependencyDeclaration(t *testing.T) {
 	t.Parallel()
 
-	content := module.Must(module.Metadata{ID: "content"},
+	content := module.Must(
+		module.Metadata{ID: "content"},
 		module.WithDependencies(module.Dependency{
 			Port:     module.Port{Name: module.PortOf[AuditService]("").Name, Version: ">"},
 			Required: true,
@@ -280,7 +282,8 @@ func TestValidateRejectsInvalidDependencyDeclaration(t *testing.T) {
 func TestSortRejectsInvalidSingleModuleDeclaration(t *testing.T) {
 	t.Parallel()
 
-	content := module.Must(module.Metadata{ID: "content"},
+	content := module.Must(
+		module.Metadata{ID: "content"},
 		module.WithDependencies(module.Dependency{
 			Port:     module.Port{Name: module.PortOf[AuditService]("").Name, Version: ">"},
 			Required: true,

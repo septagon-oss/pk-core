@@ -45,18 +45,23 @@ func NewSlogFromLogger(l *slog.Logger, extractors ...ContextExtractor) Logger {
 func (s *slogLogger) Debug(ctx context.Context, msg string, args ...any) {
 	s.inner.DebugContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
+
 func (s *slogLogger) Info(ctx context.Context, msg string, args ...any) {
 	s.inner.InfoContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
+
 func (s *slogLogger) Warn(ctx context.Context, msg string, args ...any) {
 	s.inner.WarnContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
+
 func (s *slogLogger) Error(ctx context.Context, msg string, args ...any) {
 	s.inner.ErrorContext(ctx, msg, normalizeSlogArgs(s.applyExtractors(ctx, args))...)
 }
+
 func (s *slogLogger) With(args ...any) Logger {
 	return &slogLogger{inner: s.inner.With(normalizeSlogArgs(args)...), extractors: s.extractors}
 }
+
 func (s *slogLogger) Enabled(ctx context.Context, level slog.Level) bool {
 	return s.inner.Enabled(ctx, level)
 }

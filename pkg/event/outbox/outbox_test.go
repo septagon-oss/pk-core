@@ -261,7 +261,8 @@ func TestDispatcherGivesUpAfterMaxRetries(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ob := outbox.New(inner, store,
+	ob := outbox.New(
+		inner, store,
 		outbox.WithDispatchInterval(5*time.Millisecond),
 		outbox.WithMaxRetries(2),
 	)

@@ -186,7 +186,8 @@ func (s *sqlStore) Save(ctx context.Context, env event.Envelope) error {
 			return fmt.Errorf("event/outbox: select dedupe: %w", err)
 		}
 	}
-	_, err := s.db.ExecContext(ctx, sqlInsert,
+	_, err := s.db.ExecContext(
+		ctx, sqlInsert,
 		env.ID, env.Type, env.Source, env.Subject, env.TenantID, env.CorrelationID,
 		env.IdempotencyKey, env.DataMediaType, env.Data, env.Time.UnixNano(),
 	)

@@ -5,10 +5,12 @@ package metrics
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
 
-type noopMetrics struct{}
-type noopCounter struct{}
-type noopGauge struct{}
-type noopHistogram struct{}
+type (
+	noopMetrics   struct{}
+	noopCounter   struct{}
+	noopGauge     struct{}
+	noopHistogram struct{}
+)
 
 // Noop returns a Metrics whose Counter/Gauge/Histogram operations are no-ops.
 // Calls with invalid names or labels still panic so registration misuse is
