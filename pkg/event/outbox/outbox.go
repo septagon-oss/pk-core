@@ -1,6 +1,6 @@
 // Package outbox — outbox.go owns the Outbox struct + Option type + its
 // public methods (Publish, Subscribe, Close, Start, Stop). The dispatcher
-// loop runs in a goroutine launched by Start; it reads NextBatch from the
+// loop runs in a goroutine launched by Start; it claims work from the
 // Store, forwards each Envelope to the inner event.Bus, and records the
 // outcome via MarkDelivered / MarkFailed.
 //
@@ -21,7 +21,7 @@ import (
 type Option func(*config)
 
 // ErrorHandler observes dispatcher-side failures (ADR-0049 D6). op is
-// one of "claim", "next_batch", "publish", "mark_delivered",
+// one of "claim", "publish", "mark_delivered",
 // "mark_failed", "dead_letter"; envelopeID is empty for batch-level
 // failures. The previous dispatcher swallowed every error silently —
 // an unreachable bus produced zero operator signal.
@@ -41,7 +41,6 @@ func defaultConfig() config {
 		batchSize: 64,
 		// Bounded by default (ADR-0049 D6): unlimited retries turn one
 		// poison entry into a permanent per-pass tax with no terminal
-		// state. Use WithMaxRetries(0) to restore unlimited explicitly.
 		maxRetries: 25,
 		claimTTL:   30 * time.Second,
 	}
@@ -68,20 +67,18 @@ func WithBatchSize(n int) Option {
 	}
 }
 
-// WithMaxRetries caps the number of delivery attempts before the
-// dispatcher gives up on an entry (dead-lettering it when the Store
-// supports DeadLetterStore). 0 means unlimited retries — an explicit
-// opt-in since ADR-0049 D6 made the default bounded.
+// WithMaxRetries caps delivery attempts before the dispatcher parks the entry
+// in the required dead-letter state.
 func WithMaxRetries(n int) Option {
 	return func(c *config) {
-		if n >= 0 {
+		if n > 0 {
 			c.maxRetries = n
 		}
 	}
 }
 
 // WithClaimTTL sets how long a dispatcher's claim on an entry excludes
-// it from other dispatchers (ClaimingStore only). Must comfortably
+// it from other dispatchers. Must comfortably
 // exceed one delivery attempt's worst case. Must be > 0.
 func WithClaimTTL(d time.Duration) Option {
 	return func(c *config) {
@@ -92,8 +89,7 @@ func WithClaimTTL(d time.Duration) Option {
 }
 
 // WithErrorHandler installs an observer for dispatcher-side failures.
-// Without one, failures remain silent (legacy behavior) — production
-// deployments SHOULD wire this to their logger/metrics.
+// Deployments should wire this to their logger/metrics.
 func WithErrorHandler(h ErrorHandler) Option {
 	return func(c *config) {
 		c.onError = h
@@ -110,19 +106,6 @@ type Outbox struct {
 	inner event.Bus
 	store Store
 	cfg   config
-
-	// claimUnavailable latches ONLY when the very first ClaimBatch call
-	// fails — the signature of a backing schema that predates the claim
-	// column (existing deployments that ran the old SchemaSQL). The
-	// dispatcher then falls back to NextBatch — single-dispatcher
-	// semantics — instead of stalling forever, reporting the downgrade
-	// via onError. Once ClaimBatch has succeeded even once, later
-	// errors are treated as TRANSIENT: the pass stalls and retries,
-	// because permanently downgrading a multi-dispatcher deployment to
-	// unclaimed reads over a network blip would silently reintroduce
-	// double delivery (council finding, Track D review).
-	claimProbed      bool
-	claimUnavailable bool
 
 	mu        sync.Mutex
 	started   bool
@@ -249,41 +232,21 @@ func (o *Outbox) dispatchLoop() {
 }
 
 // report forwards a dispatcher-side failure to the configured
-// ErrorHandler; without one, failures stay silent (legacy behavior).
+// ErrorHandler.
 func (o *Outbox) report(ctx context.Context, op, envelopeID string, err error) {
 	if o.cfg.onError != nil && err != nil {
 		o.cfg.onError(ctx, op, envelopeID, err)
 	}
 }
 
-// fetchBatch claims a batch when the store supports it. A failure on
-// the FIRST ever ClaimBatch call downgrades to NextBatch permanently
-// (pre-claim schema); a failure after at least one success is treated
-// as transient and stalls the pass. See Outbox.claimUnavailable.
+// fetchBatch atomically claims a batch. Claim failures always stall the pass;
+// unclaimed dispatch is not a supported mode.
 func (o *Outbox) fetchBatch(ctx context.Context) ([]PendingEntry, error) {
-	claimer, ok := o.store.(ClaimingStore)
-	if !ok || o.claimUnavailable {
-		return o.store.NextBatch(ctx, o.cfg.batchSize)
-	}
-	entries, err := claimer.ClaimBatch(ctx, o.cfg.batchSize, o.cfg.claimTTL)
-	if err == nil {
-		o.claimProbed = true
-		return entries, nil
-	}
-	if !o.claimProbed {
-		// First-ever call failed: assume the schema lacks the claim
-		// column and fall back for the Outbox's lifetime.
-		o.claimUnavailable = true
-		o.report(ctx, "claim", "", err)
-		return o.store.NextBatch(ctx, o.cfg.batchSize)
-	}
-	// Claiming has worked before — this is transient. Stall the pass
-	// rather than silently downgrade to double-delivery semantics.
-	return nil, err
+	return o.store.ClaimBatch(ctx, o.cfg.batchSize, o.cfg.claimTTL)
 }
 
-// dispatchOnce performs a single batch pass: fetch (claiming when
-// supported) -> for each entry inner.Publish -> MarkDelivered,
+// dispatchOnce performs a single batch pass: claim -> for each entry
+// inner.Publish -> MarkDelivered,
 // MarkFailed, or — past maxRetries — MarkDead (ADR-0049 D6).
 func (o *Outbox) dispatchOnce(ctx context.Context) {
 	if ctx.Err() != nil {
@@ -292,31 +255,18 @@ func (o *Outbox) dispatchOnce(ctx context.Context) {
 	entries, err := o.fetchBatch(ctx)
 	if err != nil {
 		// A fetch error stalls this pass; the next tick will retry.
-		o.report(ctx, "next_batch", "", err)
+		o.report(ctx, "claim", "", err)
 		return
 	}
-	deadLetterer, canDeadLetter := o.store.(DeadLetterStore)
 	for _, entry := range entries {
 		if ctx.Err() != nil {
 			return
 		}
-		if o.cfg.maxRetries > 0 && entry.Attempts >= o.cfg.maxRetries {
+		if entry.Attempts >= o.cfg.maxRetries {
 			const exhausted = "event/outbox: max retries exceeded"
-			if canDeadLetter {
-				if err := deadLetterer.MarkDead(ctx, entry.Envelope.ID, exhausted); err != nil {
-					o.report(ctx, "mark_failed", entry.Envelope.ID, err)
-					continue
-				}
-				o.report(ctx, "dead_letter", entry.Envelope.ID, errors.New(exhausted))
-				continue
-			}
-			// Legacy stores without a dead-letter state: preserve the
-			// old remove-from-queue behavior so the queue cannot wedge.
-			if err := o.store.MarkFailed(ctx, entry.Envelope.ID, exhausted); err != nil {
+			if err := o.store.MarkDead(ctx, entry.Envelope.ID, exhausted); err != nil {
 				o.report(ctx, "mark_failed", entry.Envelope.ID, err)
-			}
-			if err := o.store.MarkDelivered(ctx, entry.Envelope.ID); err != nil {
-				o.report(ctx, "mark_delivered", entry.Envelope.ID, err)
+				continue
 			}
 			o.report(ctx, "dead_letter", entry.Envelope.ID, errors.New(exhausted))
 			continue

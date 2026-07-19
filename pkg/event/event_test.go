@@ -1,10 +1,7 @@
-// Package event_test exercises the event contract from outside the
-// package: it imports only the published surface (Envelope, Validate,
-// Handler, Subscription, Bus, sentinel errors) and never reaches into
-// unexported state.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-EVENT-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package event_test
 
 import (
@@ -27,7 +24,6 @@ func TestEnvelopeValidateRequired(t *testing.T) {
 		{"missing Source", event.Envelope{ID: "evt-1", Type: "user.created"}},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			err := tc.env.Validate()

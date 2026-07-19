@@ -61,23 +61,9 @@ func (b StaticBundle) Defaults() []string {
 	return slices.Clone(b.defaults)
 }
 
-// ConflictPolicy controls duplicate module IDs during catalog composition.
-type ConflictPolicy int
-
-// Conflict policies for duplicate module IDs during composition.
-const (
-	// ConflictReject fails the build when two bundles contribute the same ID.
-	ConflictReject ConflictPolicy = iota
-	// ConflictFirstWins keeps the first contribution and ignores later ones.
-	ConflictFirstWins
-	// ConflictLastWins lets later contributions overwrite earlier ones.
-	ConflictLastWins
-)
-
 // CatalogBuilder composes Bundles into a Catalog.
 type CatalogBuilder struct {
 	bundles []Bundle
-	policy  ConflictPolicy
 }
 
 // NewCatalog starts a catalog builder.
@@ -104,15 +90,6 @@ func (b *CatalogBuilder) AddAll(bundles ...Bundle) *CatalogBuilder {
 	for _, bundle := range bundles {
 		b.Add(bundle)
 	}
-	return b
-}
-
-// WithConflictPolicy sets duplicate handling.
-func (b *CatalogBuilder) WithConflictPolicy(policy ConflictPolicy) *CatalogBuilder {
-	if b == nil {
-		return b
-	}
-	b.policy = policy
 	return b
 }
 
@@ -153,15 +130,7 @@ func (b *CatalogBuilder) Build() (*Catalog, error) {
 				return nil, fmt.Errorf("module catalog: bundle %q entry %q has nil constructor", name, id)
 			}
 			if _, exists := catalog.entries[id]; exists {
-				switch b.policy {
-				case ConflictReject:
-					return nil, fmt.Errorf("module catalog: module %q contributed by both %q and %q", id, catalog.sources[id], name)
-				case ConflictFirstWins:
-					continue
-				case ConflictLastWins:
-				default:
-					return nil, fmt.Errorf("module catalog: unknown conflict policy %d", b.policy)
-				}
+				return nil, fmt.Errorf("module catalog: module %q contributed by both %q and %q", id, catalog.sources[id], name)
 			}
 			catalog.entries[id] = Entry{ID: id, New: entry.New}
 			catalog.sources[id] = name
@@ -187,8 +156,8 @@ func (b *CatalogBuilder) Build() (*Catalog, error) {
 // MustBuild resolves the catalog or panics.
 //
 // Panics if Build returns an error (for example, a bundle with an empty name,
-// an entry with an empty ID or nil constructor, or a duplicate module ID under
-// the ConflictReject policy). Use Build to handle these conditions as errors.
+// an entry with an empty ID or nil constructor, or a duplicate module ID). Use
+// Build to handle these conditions as errors.
 func (b *CatalogBuilder) MustBuild() *Catalog {
 	catalog, err := b.Build()
 	if err != nil {

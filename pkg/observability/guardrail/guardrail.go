@@ -40,7 +40,7 @@ const (
 // alternating key/value convention.
 func Warn(ctx context.Context, log logger.Logger, mode Mode, code, message string, extraArgs ...any) {
 	if log == nil {
-		return
+		panic("guardrail.Warn: logger is required")
 	}
 	args := []any{
 		"guardrail", true,

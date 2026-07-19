@@ -132,8 +132,6 @@ type Code string
 const (
 	// CodeInvalidSpec indicates the registry Spec failed validation.
 	CodeInvalidSpec Code = "invalid_spec"
-	// CodeInvalidConflictPolicy indicates an unknown conflict policy was configured.
-	CodeInvalidConflictPolicy Code = "invalid_conflict_policy"
 	// CodeInvalidKey indicates a contribution key failed validation.
 	CodeInvalidKey Code = "invalid_key"
 	// CodeInvalidValue indicates a contribution value failed validation.

@@ -23,7 +23,7 @@ import (
 // scheduled delivery.
 var ErrDuplicate = errors.New("event/outbox: duplicate idempotency key")
 
-// PendingEntry is the unit a Store returns from NextBatch: an Envelope
+// PendingEntry is the unit a Store returns from ClaimBatch: an Envelope
 // plus the Attempts counter the dispatcher uses to track retries.
 //
 // PendingEntry is a value type. Store implementations may build it from
@@ -39,14 +39,15 @@ type PendingEntry struct {
 // Store persists outbox entries durably and coordinates the dispatcher's
 // claim-deliver-mark workflow. Implementations MUST be safe for
 // concurrent use; the Outbox calls Save from publisher goroutines and
-// NextBatch / MarkDelivered / MarkFailed from the dispatcher goroutine.
+// ClaimBatch / MarkDelivered / MarkFailed / MarkDead from dispatcher goroutines.
 //
 // Lifecycle contract:
 //
 //	Save(env)                  -> entry persisted, ready for dispatch
-//	NextBatch(limit)           -> up to limit not-yet-delivered entries
+//	ClaimBatch(limit, ttl)     -> atomically reserve up to limit entries
 //	MarkDelivered(env.ID)      -> entry removed (or marked terminal)
 //	MarkFailed(env.ID, errStr) -> attempts++, scheduled for retry
+//	MarkDead(env.ID, errStr)   -> terminally parked for operator redrive
 //
 // Idempotency: when env.IdempotencyKey != "" and a prior entry with the
 // same key exists, Save MUST return ErrDuplicate. The Outbox treats
@@ -59,12 +60,8 @@ type Store interface {
 	// surface to their transaction.
 	Save(ctx context.Context, env event.Envelope) error
 
-	// NextBatch returns up to limit entries that have not yet been
-	// successfully delivered. NextBatch performs NO claiming — two
-	// dispatchers calling it concurrently will both receive the same
-	// entries and double-deliver. Multi-dispatcher deployments need a
-	// ClaimingStore.
-	NextBatch(ctx context.Context, limit int) ([]PendingEntry, error)
+	// ClaimBatch atomically reserves the entries it returns until ttl elapses.
+	ClaimBatch(ctx context.Context, limit int, ttl time.Duration) ([]PendingEntry, error)
 
 	// MarkDelivered records successful delivery of envelopeID.
 	// Implementations MAY hard-delete the row or flip a status flag.
@@ -72,31 +69,10 @@ type Store interface {
 
 	// MarkFailed records that envelopeID failed delivery with errMsg.
 	// Implementations MUST increment the attempts counter and leave the
-	// entry available for the next NextBatch call.
+	// entry available for the next ClaimBatch call.
 	MarkFailed(ctx context.Context, envelopeID string, errMsg string) error
-}
 
-// ClaimingStore is the optional Store capability that makes concurrent
-// dispatchers safe (ADR-0049 D6). ClaimBatch atomically reserves the
-// entries it returns: until ttl elapses no other ClaimBatch call may
-// return them, so each entry is delivered by exactly one dispatcher per
-// claim window. A dispatcher that crashes mid-delivery implicitly
-// releases its claims when the ttl expires.
-//
-// Both built-in stores implement it. The Outbox dispatcher prefers
-// ClaimBatch when the store supports it and falls back to NextBatch
-// (single-dispatcher semantics) otherwise.
-type ClaimingStore interface {
-	Store
-	ClaimBatch(ctx context.Context, limit int, ttl time.Duration) ([]PendingEntry, error)
-}
-
-// DeadLetterStore is the optional Store capability for terminal parking
-// (ADR-0049 D6). MarkDead removes envelopeID from the pending queue
-// permanently while preserving the entry and errMsg for operator
-// inspection and replay — unlike the legacy max-retries path, which
-// marked exhausted entries delivered and lost the distinction.
-type DeadLetterStore interface {
-	Store
+	// MarkDead removes envelopeID from the pending queue permanently while
+	// preserving the row and terminal error for operator inspection/redrive.
 	MarkDead(ctx context.Context, envelopeID string, errMsg string) error
 }

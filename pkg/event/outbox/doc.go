@@ -24,7 +24,7 @@
 //     Outbox struct fields stay private.
 //   - Contract:        event.Bus (Publish, Subscribe, Close) +
 //     Start/Stop lifecycle + Store interface (Save,
-//     NextBatch, MarkDelivered, MarkFailed) +
+//     ClaimBatch, MarkDelivered, MarkFailed, MarkDead) +
 //     ErrDuplicate sentinel for idempotent Save.
 //   - Composition:     Outbox WRAPS an inner event.Bus, so Outbox(memory)
 //     and Outbox(nats) compose without changing the

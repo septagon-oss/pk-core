@@ -1,9 +1,7 @@
-// Package circuitbreaker_test exercises the circuitbreaker package from
-// the outside: it imports only the published API and drives the state
-// machine through every transition using an injected Clock.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-RESILIENCE-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package circuitbreaker_test
 
 import (
@@ -102,7 +100,7 @@ func TestClosedBreakerAllowsCalls(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	var calls atomic.Int32
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		err := br.Do(context.Background(), func(_ context.Context) error {
 			calls.Add(1)
 			return nil
@@ -128,7 +126,7 @@ func TestFailuresTripBreaker(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	fail := errors.New("boom")
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		err := br.Do(context.Background(), func(_ context.Context) error { return fail })
 		if !errors.Is(err, fail) {
 			t.Fatalf("call %d err = %v, want %v", i, err, fail)
@@ -267,7 +265,7 @@ func TestCustomIsFailurePredicate(t *testing.T) {
 		t.Fatalf("New: %v", err)
 	}
 	// 10 ignored errors should NOT trip.
-	for i := 0; i < 10; i++ {
+	for range 10 {
 		_ = br.Do(context.Background(), func(_ context.Context) error { return ignored })
 	}
 	if br.State() != circuitbreaker.StateClosed {
@@ -294,10 +292,10 @@ func TestBreakerConcurrentSafe(t *testing.T) {
 	const callsPerG = 100
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
-	for g := 0; g < goroutines; g++ {
+	for g := range goroutines {
 		go func(g int) {
 			defer wg.Done()
-			for i := 0; i < callsPerG; i++ {
+			for i := range callsPerG {
 				_ = br.Do(context.Background(), func(_ context.Context) error {
 					// Alternate success/failure to keep state churning
 					// without permanently tripping.

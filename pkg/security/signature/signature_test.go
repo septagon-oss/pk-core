@@ -1,11 +1,7 @@
-// Package signature_test — signature_test.go is the contract test suite for
-// the signature package. It exercises HMACSigner's round-trip, tampering
-// rejection, malformed-input handling, defensive key copying, and the
-// short-key sentinel error. Tests use only stdlib and the package under
-// test so they have no external dependencies.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-SECURITY-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package signature_test
 
 import (
@@ -210,11 +206,9 @@ func TestHMACSignerIsConcurrencySafe(t *testing.T) {
 	want := s.Sign(payload)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 8; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 1000; j++ {
+	for range 8 {
+		wg.Go(func() {
+			for range 1000 {
 				if got := s.Sign(payload); got != want {
 					t.Errorf("concurrent Sign drift: got %q want %q", got, want)
 					return
@@ -224,7 +218,7 @@ func TestHMACSignerIsConcurrencySafe(t *testing.T) {
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 }

@@ -1,9 +1,7 @@
-// Package bulkhead_test exercises the bulkhead package from the outside:
-// it imports only the published API and verifies the slot, queue, and
-// cancellation contracts under concurrency with -race.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-RESILIENCE-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package bulkhead_test
 
 import (
@@ -53,7 +51,7 @@ func TestDoAllowsUnderLimit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("New: %v", err)
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		err := bh.Do(context.Background(), func(_ context.Context) error { return nil })
 		if err != nil {
 			t.Fatalf("call %d: %v", i, err)
@@ -241,7 +239,7 @@ func TestInFlightTracksCorrectly(t *testing.T) {
 	var wg sync.WaitGroup
 	const n = 3
 	wg.Add(n)
-	for i := 0; i < n; i++ {
+	for range n {
 		go func() {
 			defer wg.Done()
 			_ = bh.Do(context.Background(), func(_ context.Context) error {
@@ -280,7 +278,7 @@ func TestBulkheadConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	const total = 100
 	wg.Add(total)
-	for i := 0; i < total; i++ {
+	for range total {
 		go func() {
 			defer wg.Done()
 			_ = bh.Do(context.Background(), func(_ context.Context) error {

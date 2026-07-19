@@ -1,9 +1,7 @@
-// Package cache_test exercises the cache contract from outside the
-// package: it imports only the published surface (Cache, NewMemory,
-// MemoryOption constructors) and never reaches into unexported state.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-CACHE-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package cache_test
 
 import (
@@ -166,11 +164,10 @@ func TestConcurrentSafe(t *testing.T) {
 	const ops = 200
 	var wg sync.WaitGroup
 	wg.Add(workers)
-	for w := 0; w < workers; w++ {
-		w := w
+	for w := range workers {
 		go func() {
 			defer wg.Done()
-			for i := 0; i < ops; i++ {
+			for i := range ops {
 				key := fmt.Sprintf("w%d-k%d", w, i%32)
 				_ = c.Set(ctx, key, []byte{byte(i)}, 0)
 				_, _, _ = c.Get(ctx, key)

@@ -1,11 +1,7 @@
-// Package cookies_test — cookies_test.go is the contract test suite for the
-// cookies package. Each test exercises one observable property of the
-// composable contract: profile fidelity, Secure-flag derivation, clearing
-// semantics, error sentinels, override behavior, name round-trip, and
-// race-freedom under concurrent Configure + Build.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-SECURITY-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package cookies_test
 
 import (
@@ -306,7 +302,7 @@ func TestConfigureIsRaceFree(t *testing.T) {
 	var wg sync.WaitGroup
 	stop := make(chan struct{})
 
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
@@ -324,11 +320,9 @@ func TestConfigureIsRaceFree(t *testing.T) {
 		}(i)
 	}
 
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for j := 0; j < 5000; j++ {
+	for range 4 {
+		wg.Go(func() {
+			for range 5000 {
 				c, err := cookies.Build(r, cookies.KindSession, "v")
 				if err != nil {
 					t.Errorf("Build: %v", err)
@@ -337,7 +331,7 @@ func TestConfigureIsRaceFree(t *testing.T) {
 				_ = c.Secure
 				_ = c.MaxAge
 			}
-		}()
+		})
 	}
 
 	// Let writers and readers run a beat, then signal stop.
@@ -449,11 +443,11 @@ func TestRegisterKindDefaultsEmptyPath(t *testing.T) {
 func TestRegisterKindIsRaceFree(t *testing.T) {
 	t.Parallel()
 	var wg sync.WaitGroup
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		wg.Add(1)
 		go func(i int) {
 			defer wg.Done()
-			for j := 0; j < 50; j++ {
+			for j := range 50 {
 				name := uniqueCookieName(fmt.Sprintf("race_%d_%d", i, j))
 				kind, err := cookies.RegisterKind(cookies.Profile{
 					Name:          name,

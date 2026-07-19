@@ -1,10 +1,8 @@
-package module_test
+// Validates: REQ-MODULE-001.
+// Per: ADR-0009.
+// Discipline: C-14.
 
-// example_test.go provides runnable godoc examples for ports-only module
-// composition with the OSS core package.
-//
-// ADR: ADR-0009 (ports-only module communication), ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+package module_test
 
 import (
 	"fmt"
@@ -36,7 +34,7 @@ func Example() {
 		{ID: "content", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "content", Name: "Content"},
-				module.WithDependencies(module.Require[Notifier](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[Notifier](module.PortSpec{
 					Version:           "1.0.0",
 					Purpose:           "notify subscribers on publish",
 					PreferredProvider: "notifications",

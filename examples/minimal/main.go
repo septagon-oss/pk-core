@@ -1,9 +1,8 @@
-package main
+// Implements: REQ-MODULE-001.
+// Per: ADR-0009.
+// Discipline: C-14.
 
-// main.go demonstrates ports-only module composition with the OSS core package.
-//
-// ADR: ADR-0009 (ports-only module communication), ADR-0017 (composition through dependency injection), ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+package main
 
 import (
 	"fmt"
@@ -30,7 +29,7 @@ func main() {
 		{ID: "content", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "content", Name: "Content"},
-				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 					Version:           "1.0.0",
 					Purpose:           "audit content publication",
 					PreferredProvider: "audit",

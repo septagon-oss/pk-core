@@ -1,10 +1,8 @@
-package module
+// Implements: REQ-MODULE-001.
+// Per: ADR-0009.
+// Discipline: C-14.
 
-// dependency.go owns typed dependency declarations and version-constraint
-// matching for ports-only module composition.
-//
-// ADR: ADR-0009 (ports-only module communication), ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+package module
 
 import (
 	"fmt"
@@ -46,10 +44,6 @@ type PortSpec struct {
 	FallbackProviders []string
 }
 
-// DependencySpec is kept as a friendlier name for APIs that describe module
-// dependencies rather than port contracts. It is identical to PortSpec.
-type DependencySpec = PortSpec
-
 // RequiresPort declares a typed, required dependency on interface T.
 func RequiresPort[T any](spec PortSpec) Dependency {
 	spec.Required = true
@@ -60,16 +54,6 @@ func RequiresPort[T any](spec PortSpec) Dependency {
 func OptionalPort[T any](spec PortSpec) Dependency {
 	spec.Required = false
 	return dependencyOf[T](spec)
-}
-
-// Require declares a required dependency on interface T.
-func Require[T any](spec DependencySpec) Dependency {
-	return RequiresPort[T](spec)
-}
-
-// Optional declares an optional dependency on interface T.
-func Optional[T any](spec DependencySpec) Dependency {
-	return OptionalPort[T](spec)
 }
 
 func dependencyOf[T any](spec PortSpec) Dependency {

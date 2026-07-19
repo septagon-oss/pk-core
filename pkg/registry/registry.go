@@ -1,12 +1,8 @@
-// Package registry provides the small, reusable registry substrate used by
-// PlatformKit core and extension layers.
-package registry
+// Implements: REQ-REGISTRY-001.
+// Per: ADR-0061.
+// Discipline: C-14.
 
-// registry.go owns the generic in-memory registry primitive used by higher
-// level declarative catalogs and extension points.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+package registry
 
 import (
 	"fmt"
@@ -23,23 +19,13 @@ import (
 // assignment semantics. Use RegisterIfAbsent, CatalogBuilder, or a
 // domain-specific registry when duplicate ownership must fail closed.
 type Registry[K comparable, V any] struct {
-	mu          sync.RWMutex
-	entries     map[K]V
-	normalizer  func(K) K
-	fallback    V
-	hasFallback bool
+	mu         sync.RWMutex
+	entries    map[K]V
+	normalizer func(K) K
 }
 
 // Option configures a Registry.
 type Option[K comparable, V any] func(*Registry[K, V])
-
-// WithDefault sets the fallback value returned by MustGet for missing keys.
-func WithDefault[K comparable, V any](v V) Option[K, V] {
-	return func(r *Registry[K, V]) {
-		r.fallback = v
-		r.hasFallback = true
-	}
-}
 
 // WithNormalizer applies fn before every lookup and registration.
 func WithNormalizer[K comparable, V any](fn func(K) K) Option[K, V] {
@@ -127,18 +113,6 @@ func (r *Registry[K, V]) Get(key K) (V, bool) {
 	return v, ok
 }
 
-// MustGet returns the value for key, the configured fallback, or the zero value.
-func (r *Registry[K, V]) MustGet(key K) V {
-	v, ok := r.Get(key)
-	if ok {
-		return v
-	}
-	if r != nil && r.hasFallback {
-		return r.fallback
-	}
-	return v
-}
-
 // Has reports whether a key exists.
 func (r *Registry[K, V]) Has(key K) bool {
 	_, ok := r.Get(key)
@@ -153,9 +127,7 @@ func (r *Registry[K, V]) All() map[K]V {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	out := make(map[K]V, len(r.entries))
-	for k, v := range r.entries {
-		out[k] = v
-	}
+	maps.Copy(out, r.entries)
 	return out
 }
 

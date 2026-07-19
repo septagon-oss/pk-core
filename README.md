@@ -50,7 +50,7 @@ func main() {
 		{ID: "content", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "content", Name: "Content"},
-				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 					Version:           "1.0.0",
 					Purpose:           "audit content publication",
 					PreferredProvider: "audit",

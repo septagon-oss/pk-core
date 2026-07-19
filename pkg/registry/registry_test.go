@@ -1,10 +1,8 @@
-package registry
+// Validates: REQ-REGISTRY-001.
+// Per: ADR-0061.
+// Discipline: C-14.
 
-// registry_test.go validates the generic registry's lookup, fallback,
-// duplicate, snapshot, and nil-safety behavior.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+package registry
 
 import (
 	"errors"
@@ -12,18 +10,15 @@ import (
 	"testing"
 )
 
-func TestRegistryRegisterGetAndFallback(t *testing.T) {
-	r := New(
-		WithNormalizer[string, string](strings.ToLower),
-		WithDefault[string, string]("fallback"),
-	)
+func TestRegistryRegisterAndGet(t *testing.T) {
+	r := New(WithNormalizer[string, string](strings.ToLower))
 	r.Register("Input", "input_component")
 
-	if got := r.MustGet("INPUT"); got != "input_component" {
-		t.Fatalf("MustGet(INPUT) = %q; want input_component", got)
+	if got, ok := r.Get("INPUT"); !ok || got != "input_component" {
+		t.Fatalf("Get(INPUT) = %q, %v; want input_component, true", got, ok)
 	}
-	if got := r.MustGet("missing"); got != "fallback" {
-		t.Fatalf("MustGet(missing) = %q; want fallback", got)
+	if got, ok := r.Get("missing"); ok || got != "" {
+		t.Fatalf("Get(missing) = %q, %v; want empty, false", got, ok)
 	}
 }
 
@@ -31,8 +26,8 @@ func TestRegistryZeroValueIsUsable(t *testing.T) {
 	var r Registry[string, int]
 
 	r.Register("a", 1)
-	if got := r.MustGet("a"); got != 1 {
-		t.Fatalf("zero-value registry MustGet(a) = %d; want 1", got)
+	if got, ok := r.Get("a"); !ok || got != 1 {
+		t.Fatalf("zero-value registry Get(a) = %d, %v; want 1, true", got, ok)
 	}
 	if err := r.RegisterIfAbsent("b", 2); err != nil {
 		t.Fatalf("zero-value registry RegisterIfAbsent error = %v", err)
@@ -55,7 +50,7 @@ func TestRegistryRegisterIfAbsent(t *testing.T) {
 			t.Fatalf("duplicate error type = %T; want ErrAlreadyRegistered", err)
 		}
 	}
-	if got := r.MustGet("a"); got != 1 {
+	if got, ok := r.Get("a"); !ok || got != 1 {
 		t.Fatalf("duplicate registration changed value to %d; want 1", got)
 	}
 }

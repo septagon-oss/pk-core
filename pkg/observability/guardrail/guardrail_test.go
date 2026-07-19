@@ -63,9 +63,13 @@ func TestWarnFallbackAddsMetadata(t *testing.T) {
 	}
 }
 
-func TestWarnNilLoggerIsNoop(t *testing.T) {
+func TestWarnRequiresLogger(t *testing.T) {
 	t.Parallel()
-	// Must not panic.
+	defer func() {
+		if recover() == nil {
+			t.Fatal("Warn(nil logger) did not panic")
+		}
+	}()
 	guardrail.Warn(context.Background(), nil, guardrail.ModeDegraded, "x", "msg")
 }
 

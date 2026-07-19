@@ -1,13 +1,7 @@
-// Package ratelimit_test — ratelimit_test.go is the external contract
-// test suite for the ratelimit package. It exercises TokenBucket
-// invariants (burst, refill, key isolation, retry-after, concurrent
-// safety), ClientIPKey extraction priority, Middleware behavior under
-// limit/over limit, the SkipFunc/OnLimited/KeyFunc hooks, and the
-// LimiterFunc adapter — all the surface area downstream code may rely
-// on.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-SECURITY-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package ratelimit_test
 
 import (
@@ -69,7 +63,7 @@ func TestTokenBucketAllowsBurstThenLimits(t *testing.T) {
 		t.Fatalf("NewTokenBucket: %v", err)
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		allowed, _ := tb.Allow("ip-1")
 		if !allowed {
 			t.Fatalf("request %d within burst should be allowed", i+1)
@@ -181,11 +175,11 @@ func TestTokenBucketConcurrentSafe(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(goroutines)
 	var allowedCount int64
-	for g := 0; g < goroutines; g++ {
+	for g := range goroutines {
 		go func(id int) {
 			defer wg.Done()
 			key := "ip-" + strconv.Itoa(id%4)
-			for i := 0; i < perG; i++ {
+			for range perG {
 				if allowed, _ := tb.Allow(key); allowed {
 					atomic.AddInt64(&allowedCount, 1)
 				}
@@ -272,7 +266,7 @@ func TestMiddlewareAllowsUnderLimit(t *testing.T) {
 		KeyFunc: func(*http.Request) string { return "fixed-key" },
 	})
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		rec := httptest.NewRecorder()
 		mw(okHandler()).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 		if rec.Code != http.StatusOK {
@@ -296,7 +290,7 @@ func TestMiddlewareReturns429AndRetryAfterOverLimit(t *testing.T) {
 	})
 
 	// Drain the burst.
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		rec := httptest.NewRecorder()
 		mw(okHandler()).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 		if rec.Code != http.StatusOK {

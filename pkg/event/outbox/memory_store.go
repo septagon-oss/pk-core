@@ -24,11 +24,11 @@ type memoryEntry struct {
 	attempts  int
 	lastError string
 	delivered bool
-	// dead marks a terminally-parked entry (DeadLetterStore, ADR-0049
+	// dead marks a terminally-parked entry (ADR-0049
 	// D6): excluded from every batch, retained for inspection/replay.
 	dead bool
 	// claimedUntil excludes the entry from other dispatchers' batches
-	// until the claim window elapses (ClaimingStore, ADR-0049 D6).
+	// until the claim window elapses (ADR-0049 D6).
 	claimedUntil time.Time
 }
 
@@ -42,7 +42,7 @@ type memoryStore struct {
 
 // NewMemoryStore returns an in-memory Store suitable for tests and
 // single-process OSS deployments. The store keeps delivered entries in
-// memory until they are GC'd by a subsequent NextBatch pass; this keeps
+// memory until explicit cleanup; this keeps
 // MarkDelivered O(1) and lets tests inspect history.
 func NewMemoryStore() Store {
 	return &memoryStore{
@@ -78,36 +78,7 @@ func (s *memoryStore) Save(ctx context.Context, env event.Envelope) error {
 	return nil
 }
 
-// NextBatch returns up to limit not-yet-delivered entries in insertion
-// order.
-func (s *memoryStore) NextBatch(ctx context.Context, limit int) ([]PendingEntry, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
-	if limit <= 0 {
-		return nil, nil
-	}
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	now := time.Now()
-	out := make([]PendingEntry, 0, limit)
-	for _, e := range s.entries {
-		if e.delivered || e.dead || e.claimedUntil.After(now) {
-			continue
-		}
-		out = append(out, PendingEntry{
-			Envelope: e.envelope,
-			Attempts: e.attempts,
-		})
-		if len(out) >= limit {
-			break
-		}
-	}
-	return out, nil
-}
-
-// ClaimBatch implements ClaimingStore: it atomically reserves the
+// ClaimBatch atomically reserves the
 // entries it returns for ttl, so concurrent dispatchers cannot receive
 // the same entry within a claim window (ADR-0049 D6).
 func (s *memoryStore) ClaimBatch(ctx context.Context, limit int, ttl time.Duration) ([]PendingEntry, error) {
@@ -138,7 +109,7 @@ func (s *memoryStore) ClaimBatch(ctx context.Context, limit int, ttl time.Durati
 	return out, nil
 }
 
-// MarkDead implements DeadLetterStore: the entry leaves the pending
+// MarkDead parks the entry outside the pending
 // queue permanently but stays in memory with its final error for
 // inspection (ADR-0049 D6).
 func (s *memoryStore) MarkDead(ctx context.Context, envelopeID, errMsg string) error {
@@ -169,7 +140,7 @@ func (s *memoryStore) MarkDelivered(ctx context.Context, envelopeID string) erro
 }
 
 // MarkFailed increments the attempts counter and records the error string.
-// The entry remains available for future NextBatch calls — which means
+// The entry remains available for future ClaimBatch calls — which means
 // it also RELEASES any live claim (ADR-0049 D6): the failed attempt is
 // over, so holding the claim until its TTL would silently stretch every
 // retry by the claim window.

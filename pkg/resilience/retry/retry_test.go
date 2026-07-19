@@ -1,11 +1,7 @@
-// Package retry_test exercises the retry package from the outside: it
-// imports only the published API and never reaches into unexported state.
-// The cross-block composition test demonstrates the chainable contract by
-// stacking retry around a minimal in-test breaker mock that mirrors the
-// circuitbreaker.Breaker.Do shape.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-RESILIENCE-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package retry_test
 
 import (
@@ -310,7 +306,7 @@ func TestDoZeroJitterIsDeterministic(t *testing.T) {
 	// (20ms). Allow a generous +20ms upper slack for scheduler latency
 	// and require at least 80% of the target for the lower bound. We
 	// check repeatability by ensuring three runs land in the same window.
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		got := measure()
 		if got < 16*time.Millisecond || got > 80*time.Millisecond {
 			t.Fatalf("gap = %v, want in [16ms,80ms]", got)

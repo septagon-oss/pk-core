@@ -1,11 +1,7 @@
-// Package ratelimit — tokenbucket.go owns the in-memory TokenBucket
-// implementation of Limiter. State is sharded per-key under a single
-// mutex; per-bucket math is allocation-free on the steady-state path.
-// Buckets are reaped after IdleTTL of inactivity to bound memory under
-// high-cardinality keys (one bucket per client IP).
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Implements: REQ-SECURITY-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package ratelimit
 
 import (
@@ -124,10 +120,7 @@ func (b *TokenBucket) Allow(key string) (bool, time.Duration) {
 
 	// Need (1 - bk.tokens) more tokens at rate tokens/sec.
 	needed := 1 - bk.tokens
-	retryAfter := time.Duration(needed / b.rate * float64(time.Second))
-	if retryAfter < 0 {
-		retryAfter = 0
-	}
+	retryAfter := max(time.Duration(needed/b.rate*float64(time.Second)), 0)
 	return false, retryAfter
 }
 

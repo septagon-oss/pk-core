@@ -1,12 +1,7 @@
-// Package headers_test — headers_test.go is the external contract test
-// suite for the headers package. Tests exercise the observable properties
-// of the Composable + Chainable contract: default headers, per-request
-// nonce freshness, nonce context propagation, CSP directive merging,
-// Permissions-Policy respect, managed-header clearing, and the stability
-// of ManagedResponseHeaderNames.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-SECURITY-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package headers_test
 
 import (
@@ -70,7 +65,7 @@ func TestNonceIsFreshPerRequest(t *testing.T) {
 	h := mw(noopHandler())
 
 	seen := make(map[string]struct{})
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/", nil))
 
@@ -79,11 +74,11 @@ func TestNonceIsFreshPerRequest(t *testing.T) {
 			t.Fatalf("iteration %d: missing CSP header", i)
 		}
 		// Extract the nonce from the rendered CSP.
-		idx := strings.Index(csp, "'nonce-")
-		if idx < 0 {
+		_, after, ok := strings.Cut(csp, "'nonce-")
+		if !ok {
 			t.Fatalf("iteration %d: CSP missing nonce token: %q", i, csp)
 		}
-		rest := csp[idx+len("'nonce-"):]
+		rest := after
 		end := strings.Index(rest, "'")
 		if end < 0 {
 			t.Fatalf("iteration %d: unterminated nonce token: %q", i, csp)
@@ -294,7 +289,6 @@ func TestHSTSConfigVariants(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 			mw := headers.Middleware(tc.cfg)

@@ -1,9 +1,7 @@
-// Package memory_test exercises the in-process bus from outside the
-// package: tests import only the published surface (New, options, the
-// event.Bus contract) and never touch unexported state.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-EVENT-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package memory_test
 
 import (
@@ -55,7 +53,7 @@ func TestSubscribeMultipleHandlers(t *testing.T) {
 	defer bus.Close()
 
 	var hits int32
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		if _, err := bus.Subscribe("e", func(ctx context.Context, env event.Envelope) error {
 			atomic.AddInt32(&hits, 1)
 			return nil
@@ -345,7 +343,7 @@ func TestPublishConcurrentSafe(t *testing.T) {
 	defer bus.Close()
 
 	var hits int64
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		if _, err := bus.Subscribe("e", func(context.Context, event.Envelope) error {
 			atomic.AddInt64(&hits, 1)
 			return nil
@@ -357,17 +355,15 @@ func TestPublishConcurrentSafe(t *testing.T) {
 	const publishers = 8
 	const each = 50
 	var wg sync.WaitGroup
-	for p := 0; p < publishers; p++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for i := 0; i < each; i++ {
+	for range publishers {
+		wg.Go(func() {
+			for range each {
 				if err := bus.Publish(context.Background(), newEnv("evt", "e")); err != nil {
 					t.Errorf("Publish: %v", err)
 					return
 				}
 			}
-		}()
+		})
 	}
 	wg.Wait()
 	want := int64(publishers * each * 4)

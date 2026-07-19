@@ -36,7 +36,7 @@ import (
 // delivered_at semantics: 0 = pending, > 0 = delivered (Unix nanos),
 // DeadDeliveredAt (-1) = dead-lettered (ADR-0049 D6). claimed_until
 // (Unix nanos, 0 = unclaimed) backs ClaimBatch's lease; existing
-// deployments add it via UpgradeSchema.
+// rows require it.
 const SchemaSQL = `
 CREATE TABLE IF NOT EXISTS pk_event_outbox (
     id              TEXT PRIMARY KEY,
@@ -66,27 +66,6 @@ CREATE INDEX IF NOT EXISTS pk_event_outbox_pending
 // for inspection and replay (`WHERE delivered_at = -1`).
 const DeadDeliveredAt = -1
 
-// UpgradeSchema brings a pre-claim pk_event_outbox table up to the
-// current schema by adding the claimed_until column. Safe to run on
-// every bootstrap: the ALTER's "duplicate column" failure is swallowed
-// and the column's presence is verified by a probe afterwards, so a
-// genuine failure still surfaces. New installs that ran the current
-// SchemaSQL need no upgrade.
-func UpgradeSchema(ctx context.Context, db *sql.DB) error {
-	if db == nil {
-		return errors.New("event/outbox: UpgradeSchema requires non-nil *sql.DB")
-	}
-	// Error deliberately ignored: "duplicate column name" (SQLite) /
-	// "already exists" (Postgres) is the common, healthy case.
-	_, _ = db.ExecContext(ctx, `ALTER TABLE pk_event_outbox ADD COLUMN claimed_until INTEGER NOT NULL DEFAULT 0;`)
-	var probe int64
-	err := db.QueryRowContext(ctx, `SELECT claimed_until FROM pk_event_outbox LIMIT 1;`).Scan(&probe)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
-		return fmt.Errorf("event/outbox: claimed_until column unavailable after upgrade: %w", err)
-	}
-	return nil
-}
-
 // sqlStore implements Store on top of *sql.DB.
 type sqlStore struct {
 	db *sql.DB
@@ -112,15 +91,6 @@ const sqlSelectByKey = `
 SELECT id FROM pk_event_outbox WHERE idempotency_key = ? LIMIT 1;
 `
 
-const sqlNextBatch = `
-SELECT id, type, source, subject, tenant_id, correlation_id, idempotency_key,
-       media_type, data, emitted_at, attempts
-FROM pk_event_outbox
-WHERE delivered_at = 0
-ORDER BY emitted_at ASC, id ASC
-LIMIT ?;
-`
-
 const sqlMarkDelivered = `
 UPDATE pk_event_outbox SET delivered_at = ? WHERE id = ?;
 `
@@ -128,17 +98,10 @@ UPDATE pk_event_outbox SET delivered_at = ? WHERE id = ?;
 // sqlMarkFailed also releases any live claim (claimed_until = 0): the
 // failed attempt is over and the entry must be available for the next
 // pass per the Store contract — holding the claim would stretch every
-// retry by the claim TTL. NOTE: pre-claim schemas (no claimed_until
-// column) get the legacy statement via the fallback in MarkFailed.
+// retry by the claim TTL.
 const sqlMarkFailed = `
 UPDATE pk_event_outbox
 SET attempts = attempts + 1, last_error = ?, claimed_until = 0
-WHERE id = ?;
-`
-
-const sqlMarkFailedLegacy = `
-UPDATE pk_event_outbox
-SET attempts = attempts + 1, last_error = ?
 WHERE id = ?;
 `
 
@@ -205,40 +168,6 @@ func (s *sqlStore) Save(ctx context.Context, env event.Envelope) error {
 	return nil
 }
 
-// NextBatch returns up to limit not-yet-delivered entries in FIFO order.
-func (s *sqlStore) NextBatch(ctx context.Context, limit int) ([]PendingEntry, error) {
-	if limit <= 0 {
-		return nil, nil
-	}
-	rows, err := s.db.QueryContext(ctx, sqlNextBatch, limit)
-	if err != nil {
-		return nil, fmt.Errorf("event/outbox: query batch: %w", err)
-	}
-	defer rows.Close()
-
-	out := make([]PendingEntry, 0, limit)
-	for rows.Next() {
-		var (
-			env       event.Envelope
-			emittedAt int64
-			attempts  int
-		)
-		if err := rows.Scan(
-			&env.ID, &env.Type, &env.Source, &env.Subject, &env.TenantID,
-			&env.CorrelationID, &env.IdempotencyKey, &env.DataMediaType,
-			&env.Data, &emittedAt, &attempts,
-		); err != nil {
-			return nil, fmt.Errorf("event/outbox: scan: %w", err)
-		}
-		env.Time = time.Unix(0, emittedAt)
-		out = append(out, PendingEntry{Envelope: env, Attempts: attempts})
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("event/outbox: rows: %w", err)
-	}
-	return out, nil
-}
-
 // MarkDelivered stamps the row with the current Unix-nano timestamp.
 func (s *sqlStore) MarkDelivered(ctx context.Context, envelopeID string) error {
 	_, err := s.db.ExecContext(ctx, sqlMarkDelivered, time.Now().UnixNano(), envelopeID)
@@ -248,26 +177,19 @@ func (s *sqlStore) MarkDelivered(ctx context.Context, envelopeID string) error {
 	return nil
 }
 
-// MarkFailed increments attempts, records errMsg, and releases any live
-// claim. Pre-claim schemas (no claimed_until column) fall back to the
-// legacy statement so existing deployments keep working unmodified.
+// MarkFailed increments attempts, records errMsg, and releases any live claim.
 func (s *sqlStore) MarkFailed(ctx context.Context, envelopeID, errMsg string) error {
 	_, err := s.db.ExecContext(ctx, sqlMarkFailed, errMsg, envelopeID)
 	if err != nil {
-		if _, legacyErr := s.db.ExecContext(ctx, sqlMarkFailedLegacy, errMsg, envelopeID); legacyErr == nil {
-			return nil
-		}
 		return fmt.Errorf("event/outbox: mark failed: %w", err)
 	}
 	return nil
 }
 
-// ClaimBatch implements ClaimingStore (ADR-0049 D6): select unclaimed
+// ClaimBatch selects unclaimed
 // pending candidates, then claim each with an atomic compare-and-set
 // UPDATE; rows lost to a concurrent dispatcher are silently skipped.
-// Requires the claimed_until column (SchemaSQL, or UpgradeSchema for
-// pre-claim tables) — without it the first call errors and the Outbox
-// dispatcher falls back to unclaimed NextBatch.
+// Requires the claimed_until column from SchemaSQL.
 func (s *sqlStore) ClaimBatch(ctx context.Context, limit int, ttl time.Duration) ([]PendingEntry, error) {
 	if limit <= 0 {
 		return nil, nil
@@ -318,7 +240,7 @@ func (s *sqlStore) ClaimBatch(ctx context.Context, limit int, ttl time.Duration)
 	return out, nil
 }
 
-// MarkDead implements DeadLetterStore (ADR-0049 D6): the row leaves the
+// MarkDead parks the row outside the
 // pending queue permanently (delivered_at = DeadDeliveredAt) with its
 // final error preserved for inspection and replay.
 func (s *sqlStore) MarkDead(ctx context.Context, envelopeID, errMsg string) error {

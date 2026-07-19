@@ -54,7 +54,7 @@ func NewBillingModule() *BillingModule {
     return &BillingModule{
         Module: *module.Must(
             module.Metadata{ID: "billing"},
-            module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+            module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
                 Version: "^1.0.0",
                 Purpose: "audit invoice lifecycle events",
             })),

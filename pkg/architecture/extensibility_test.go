@@ -1,11 +1,8 @@
-package architecture_test
+// Validates: REQ-MODULE-001.
+// Per: ADR-0009.
+// Discipline: C-14.
 
-// extensibility_test.go is the executable fitness test proving Pro modules can
-// extend the OSS kernel through ports, registries, authz, entities, and
-// mutation gates without private core forks.
-//
-// ADR: ADR-0009 (ports-only module communication), ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+package architecture_test
 
 import (
 	"context"
@@ -49,7 +46,7 @@ func TestOpenCoreExtensibilityFitness(t *testing.T) {
 			New: func() module.Composable {
 				base := module.Must(
 					module.Metadata{ID: "billing", Name: "Billing"},
-					module.WithDependencies(module.Require[auditSink](module.DependencySpec{
+					module.WithDependencies(module.RequiresPort[auditSink](module.PortSpec{
 						Version:           "^1.0.0",
 						Purpose:           "audit invoice lifecycle events",
 						PreferredProvider: "audit",

@@ -1,15 +1,14 @@
-// Package headers — headers.go owns the Config struct, the Middleware
-// factory, the CSP nonce context plumbing, and the managed-header
-// inventory used by clear-and-overwrite response paths.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Implements: REQ-SECURITY-001.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package headers
 
 import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
+	"maps"
 	"net/http"
 	"sort"
 	"strconv"
@@ -261,9 +260,7 @@ func merge(cfgs ...Config) Config {
 			if out.CSPDirectives == nil {
 				out.CSPDirectives = make(map[string]string, len(c.CSPDirectives))
 			}
-			for k, v := range c.CSPDirectives {
-				out.CSPDirectives[k] = v
-			}
+			maps.Copy(out.CSPDirectives, c.CSPDirectives)
 		}
 	}
 	return out

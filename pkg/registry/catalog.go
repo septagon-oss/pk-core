@@ -1,7 +1,7 @@
 package registry
 
 // catalog.go owns immutable declarative registries with deterministic
-// ordering, conflict policy, and structured diagnostics.
+// ordering and structured diagnostics.
 //
 // ADR: ADR-0005 (no silent failures), ADR-0029 (file purpose declaration).
 // Convention: C-10 (shared builders return errors), C-14 (file purpose declaration).
@@ -10,18 +10,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-)
-
-// ConflictPolicy controls duplicate keys during catalog construction.
-type ConflictPolicy int
-
-const (
-	// ConflictReject fails Build when two contributions resolve to the same key.
-	ConflictReject ConflictPolicy = iota
-	// ConflictFirstWins keeps the first contribution for a duplicate key.
-	ConflictFirstWins
-	// ConflictLastWins keeps the last contribution for a duplicate key.
-	ConflictLastWins
 )
 
 // Contribution is a declarative registry contribution with source metadata.
@@ -44,7 +32,6 @@ type Catalog[K comparable, V any] struct {
 type CatalogBuilder[K comparable, V any] struct {
 	contributions []Contribution[K, V]
 	normalizer    func(K) K
-	conflict      ConflictPolicy
 	less          func(K, K) bool
 	validateKey   func(K) error
 	validateValue func(V) error
@@ -57,7 +44,7 @@ type CatalogOption[K comparable, V any] func(*CatalogBuilder[K, V])
 
 // NewCatalogBuilder creates a builder for immutable registry catalogs.
 func NewCatalogBuilder[K comparable, V any](opts ...CatalogOption[K, V]) *CatalogBuilder[K, V] {
-	b := &CatalogBuilder[K, V]{conflict: ConflictReject}
+	b := &CatalogBuilder[K, V]{}
 	for _, opt := range opts {
 		if opt != nil {
 			opt(b)
@@ -70,13 +57,6 @@ func NewCatalogBuilder[K comparable, V any](opts ...CatalogOption[K, V]) *Catalo
 func WithCatalogNormalizer[K comparable, V any](fn func(K) K) CatalogOption[K, V] {
 	return func(b *CatalogBuilder[K, V]) {
 		b.normalizer = fn
-	}
-}
-
-// WithCatalogConflictPolicy sets duplicate-key behavior.
-func WithCatalogConflictPolicy[K comparable, V any](policy ConflictPolicy) CatalogOption[K, V] {
-	return func(b *CatalogBuilder[K, V]) {
-		b.conflict = policy
 	}
 }
 
@@ -135,9 +115,6 @@ func (b *CatalogBuilder[K, V]) Build() (*Catalog[K, V], error) {
 	if b == nil {
 		return &Catalog[K, V]{entries: map[K]Contribution[K, V]{}}, nil
 	}
-	if err := validateConflictPolicy(b.conflict); err != nil {
-		return nil, err
-	}
 	spec, hasSpec, err := b.normalizedSpec()
 	if err != nil {
 		return nil, err
@@ -181,24 +158,14 @@ func (b *CatalogBuilder[K, V]) Build() (*Catalog[K, V], error) {
 			Source: contribution.Source,
 		}
 		if existing, ok := entries[key]; ok {
-			switch b.conflict {
-			case ConflictReject:
-				return nil, diagnosticError(Diagnostic{
-					Severity:   SeverityError,
-					Code:       CodeDuplicateKey,
-					RegistryID: spec.ID,
-					Key:        fmt.Sprint(key),
-					Source:     contribution.Source,
-					Message:    fmt.Sprintf("duplicate key already contributed by %q", existing.Source),
-				})
-			case ConflictFirstWins:
-				continue
-			case ConflictLastWins:
-				entries[key] = normalized
-				continue
-			default:
-				return nil, fmt.Errorf("registry catalog: unknown conflict policy %d", b.conflict)
-			}
+			return nil, diagnosticError(Diagnostic{
+				Severity:   SeverityError,
+				Code:       CodeDuplicateKey,
+				RegistryID: spec.ID,
+				Key:        fmt.Sprint(key),
+				Source:     contribution.Source,
+				Message:    fmt.Sprintf("duplicate key already contributed by %q", existing.Source),
+			})
 		}
 		entries[key] = normalized
 		order = append(order, key)
@@ -229,8 +196,8 @@ func (b *CatalogBuilder[K, V]) Build() (*Catalog[K, V], error) {
 // MustBuild returns Build's catalog or panics.
 //
 // Panics if Build returns an error (for example, an invalid Spec, an invalid
-// conflict policy, a key or value that fails its validator, or a duplicate key
-// under the ConflictReject policy). Use Build to handle these as errors.
+// key or value that fails its validator, or a duplicate key). Use Build to
+// handle these as errors.
 func (b *CatalogBuilder[K, V]) MustBuild() *Catalog[K, V] {
 	catalog, err := b.Build()
 	if err != nil {
@@ -323,19 +290,6 @@ func (c *Catalog[K, V]) normalize(key K) K {
 		return c.normalizer(key)
 	}
 	return key
-}
-
-func validateConflictPolicy(policy ConflictPolicy) error {
-	switch policy {
-	case ConflictReject, ConflictFirstWins, ConflictLastWins:
-		return nil
-	default:
-		return diagnosticError(Diagnostic{
-			Severity: SeverityError,
-			Code:     CodeInvalidConflictPolicy,
-			Message:  fmt.Sprintf("unknown conflict policy %d", policy),
-		})
-	}
 }
 
 func (b *CatalogBuilder[K, V]) normalizedSpec() (Spec, bool, error) {

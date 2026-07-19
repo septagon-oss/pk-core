@@ -1,16 +1,15 @@
-// Package outbox_test — claim semantics, dead-lettering, and error
-// observability (ADR-0049 D6 acceptance tests). Like the sibling file,
-// tests use only the published surface; SQLStore's claim/dead queries
-// are covered structurally here and end-to-end downstream.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-EVENT-001.
+// Per: ADR-0049.
+// Discipline: C-14.
+
 package outbox_test
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 	"testing"
 	"time"
@@ -50,16 +49,14 @@ func (b *countingBus) snapshot() map[string]int {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	out := make(map[string]int, len(b.counts))
-	for k, v := range b.counts {
-		out[k] = v
-	}
+	maps.Copy(out, b.counts)
 	return out
 }
 
 // TestConcurrentDispatchersDeliverExactlyOnce is THE D6 claim test: two
-// Outbox dispatchers share one ClaimingStore; every envelope must reach
+// Outbox dispatchers share one Store with mandatory claims; every envelope must reach
 // the bus exactly once. Before claims, both dispatchers read the same
-// NextBatch and double-delivered everything.
+// row and double-delivered everything.
 func TestConcurrentDispatchersDeliverExactlyOnce(t *testing.T) {
 	t.Parallel()
 	store := outbox.NewMemoryStore()
@@ -67,7 +64,7 @@ func TestConcurrentDispatchersDeliverExactlyOnce(t *testing.T) {
 	ctx := context.Background()
 
 	const total = 60
-	for i := 0; i < total; i++ {
+	for i := range total {
 		if err := store.Save(ctx, newEnv(fmt.Sprintf("evt-%03d", i), "claim.test")); err != nil {
 			t.Fatalf("save %d: %v", i, err)
 		}
@@ -151,9 +148,9 @@ func TestPoisonEnvelopeDeadLetters(t *testing.T) {
 		t.Fatal("poison envelope reached the bus")
 	}
 	ob.Stop()
-	batch, err := store.NextBatch(ctx, 10)
+	batch, err := store.ClaimBatch(ctx, 10, time.Minute)
 	if err != nil {
-		t.Fatalf("NextBatch: %v", err)
+		t.Fatalf("ClaimBatch: %v", err)
 	}
 	for _, entry := range batch {
 		if entry.Envelope.ID == "evt-poison" {
@@ -167,27 +164,23 @@ func TestPoisonEnvelopeDeadLetters(t *testing.T) {
 func TestExpiredClaimIsRedelivered(t *testing.T) {
 	t.Parallel()
 	store := outbox.NewMemoryStore()
-	claimer, ok := store.(outbox.ClaimingStore)
-	if !ok {
-		t.Fatal("MemoryStore must implement ClaimingStore")
-	}
 	ctx := context.Background()
 	if err := store.Save(ctx, newEnv("evt-1", "e")); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 
 	// "Crashed dispatcher": claims with a short TTL, never delivers.
-	claimed, err := claimer.ClaimBatch(ctx, 10, 50*time.Millisecond)
+	claimed, err := store.ClaimBatch(ctx, 10, 50*time.Millisecond)
 	if err != nil || len(claimed) != 1 {
 		t.Fatalf("first claim: %v (n=%d)", err, len(claimed))
 	}
 	// While claimed, nothing is eligible.
-	if again, _ := claimer.ClaimBatch(ctx, 10, time.Second); len(again) != 0 {
+	if again, _ := store.ClaimBatch(ctx, 10, time.Second); len(again) != 0 {
 		t.Fatalf("claimed envelope re-claimed inside its window (n=%d)", len(again))
 	}
 	// After expiry, it is claimable again.
 	time.Sleep(60 * time.Millisecond)
-	reclaimed, err := claimer.ClaimBatch(ctx, 10, time.Second)
+	reclaimed, err := store.ClaimBatch(ctx, 10, time.Second)
 	if err != nil || len(reclaimed) != 1 {
 		t.Fatalf("expired claim not reclaimed: %v (n=%d)", err, len(reclaimed))
 	}
@@ -227,19 +220,13 @@ func TestErrorHandlerObservesPublishFailures(t *testing.T) {
 	waitFor(t, 5*time.Second, func() bool {
 		mu.Lock()
 		defer mu.Unlock()
-		for _, op := range ops {
-			if op == "publish" {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(ops, "publish")
 	})
 }
 
-// flakyClaimStore wraps a ClaimingStore and fails ClaimBatch on demand,
-// for exercising the dispatcher's downgrade-vs-stall policy.
+// flakyClaimStore wraps a Store and fails ClaimBatch on demand.
 type flakyClaimStore struct {
-	outbox.ClaimingStore
+	outbox.Store
 	mu      sync.Mutex
 	failNow bool
 }
@@ -257,17 +244,16 @@ func (s *flakyClaimStore) ClaimBatch(ctx context.Context, limit int, ttl time.Du
 	if fail {
 		return nil, errors.New("flaky: claim unavailable")
 	}
-	return s.ClaimingStore.ClaimBatch(ctx, limit, ttl)
+	return s.Store.ClaimBatch(ctx, limit, ttl)
 }
 
-// TestFirstClaimFailureDowngradesToNextBatch: when the very first
-// ClaimBatch call fails (pre-claim schema), the dispatcher reports the
-// downgrade and keeps delivering via NextBatch.
-func TestFirstClaimFailureDowngradesToNextBatch(t *testing.T) {
+// TestInitialClaimFailureStallsUntilRecovery proves there is no unclaimed
+// downgrade path, even when the first claim fails.
+func TestInitialClaimFailureStallsUntilRecovery(t *testing.T) {
 	t.Parallel()
-	inner := outbox.NewMemoryStore().(outbox.ClaimingStore)
-	store := &flakyClaimStore{ClaimingStore: inner}
-	store.setFail(true) // fail from the start = schema signature
+	inner := outbox.NewMemoryStore()
+	store := &flakyClaimStore{Store: inner}
+	store.setFail(true)
 	bus := newCountingBus()
 	ctx := context.Background()
 
@@ -292,25 +278,29 @@ func TestFirstClaimFailureDowngradesToNextBatch(t *testing.T) {
 	ob.Start(ctx)
 	defer ob.Stop()
 
+	time.Sleep(50 * time.Millisecond)
+	if bus.snapshot()["evt-1"] != 0 {
+		t.Fatal("claim failure fell back to unsafe unclaimed dispatch")
+	}
+	mu.Lock()
+	if !claimReported {
+		mu.Unlock()
+		t.Fatal("claim failure was not reported via the error handler")
+	}
+	mu.Unlock()
+	store.setFail(false)
 	waitFor(t, 5*time.Second, func() bool {
 		return bus.snapshot()["evt-1"] == 1
 	})
-	mu.Lock()
-	defer mu.Unlock()
-	if !claimReported {
-		t.Fatal("downgrade to NextBatch was not reported via the error handler")
-	}
 }
 
 // TestTransientClaimFailureStallsInsteadOfDowngrading (council finding,
 // Track D review): once claiming has succeeded, a later ClaimBatch
-// error must STALL the pass — not permanently downgrade the dispatcher
-// to unclaimed reads, which would silently reintroduce double delivery
-// in multi-dispatcher deployments.
+// error must stall the pass until the store recovers.
 func TestTransientClaimFailureStallsInsteadOfDowngrading(t *testing.T) {
 	t.Parallel()
-	inner := outbox.NewMemoryStore().(outbox.ClaimingStore)
-	store := &flakyClaimStore{ClaimingStore: inner}
+	inner := outbox.NewMemoryStore()
+	store := &flakyClaimStore{Store: inner}
 	bus := newCountingBus()
 	ctx := context.Background()
 
@@ -331,14 +321,14 @@ func TestTransientClaimFailureStallsInsteadOfDowngrading(t *testing.T) {
 	})
 
 	// Phase 2: claims start failing (transient outage). New work must
-	// NOT flow via an unclaimed NextBatch fallback.
+	// NOT flow without a claim.
 	store.setFail(true)
 	if err := store.Save(ctx, newEnv("evt-2", "e")); err != nil {
 		t.Fatalf("save: %v", err)
 	}
 	time.Sleep(100 * time.Millisecond) // many dispatch passes
 	if bus.snapshot()["evt-2"] != 0 {
-		t.Fatal("dispatcher downgraded to unclaimed NextBatch on a transient claim failure — double-delivery risk")
+		t.Fatal("dispatcher delivered without a claim during a transient failure")
 	}
 
 	// Phase 3: outage clears; delivery resumes through claims.
@@ -348,10 +338,10 @@ func TestTransientClaimFailureStallsInsteadOfDowngrading(t *testing.T) {
 	})
 }
 
-// TestSQLStoreImplementsNewCapabilities pins the structural contract:
-// the SQL store advertises claiming + dead-lettering (queries are
+// TestSQLStoreImplementsRequiredCapabilities pins the structural contract:
+// the SQL store provides claiming + dead-lettering (queries are
 // integration-tested downstream, per this package's testing policy).
-func TestSQLStoreImplementsNewCapabilities(t *testing.T) {
+func TestSQLStoreImplementsRequiredCapabilities(t *testing.T) {
 	t.Parallel()
 	// Compile-time-ish assertion through the public constructor's type.
 	if _, err := outbox.NewSQLStore(nil); err == nil {

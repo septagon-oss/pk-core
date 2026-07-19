@@ -80,10 +80,6 @@ func TestCatalogBuilderNilReceiverIsSafe(t *testing.T) {
 	if got := builder.AddAll(); got != nil {
 		t.Fatalf("AddAll() = %#v, want nil builder", got)
 	}
-	if got := builder.WithConflictPolicy(module.ConflictReject); got != nil {
-		t.Fatalf("WithConflictPolicy() = %#v, want nil builder", got)
-	}
-
 	catalog, err := builder.Build()
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)

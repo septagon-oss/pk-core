@@ -1,12 +1,7 @@
-// Package outbox_test exercises the durable outbox from outside the
-// package: tests import only the published surface (New, Outbox, Store,
-// NewMemoryStore, NewSQLStore, ErrDuplicate, SchemaSQL, Options) and
-// never reach into unexported state. SQLStore is covered structurally
-// (the SchemaSQL constant is well-formed and NewSQLStore validates its
-// argument); end-to-end SQL integration is the downstream tests' job.
-//
-// ADR: ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+// Validates: REQ-EVENT-001.
+// Per: ADR-0049.
+// Discipline: C-14.
+
 package outbox_test
 
 import (
@@ -47,20 +42,20 @@ func waitFor(t *testing.T, deadline time.Duration, fn func() bool) {
 
 // --- MemoryStore contract tests -------------------------------------------
 
-func TestMemoryStoreSaveAndNextBatch(t *testing.T) {
+func TestMemoryStoreSaveAndClaimBatch(t *testing.T) {
 	t.Parallel()
 	store := outbox.NewMemoryStore()
 	ctx := context.Background()
 
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		env := newEnv("evt-"+string(rune('a'+i)), "e")
 		if err := store.Save(ctx, env); err != nil {
 			t.Fatalf("Save %d: %v", i, err)
 		}
 	}
-	batch, err := store.NextBatch(ctx, 10)
+	batch, err := store.ClaimBatch(ctx, 10, time.Minute)
 	if err != nil {
-		t.Fatalf("NextBatch: %v", err)
+		t.Fatalf("ClaimBatch: %v", err)
 	}
 	if len(batch) != 3 {
 		t.Errorf("len(batch) = %d, want 3", len(batch))
@@ -70,14 +65,14 @@ func TestMemoryStoreSaveAndNextBatch(t *testing.T) {
 	}
 }
 
-func TestMemoryStoreNextBatchHonorsLimit(t *testing.T) {
+func TestMemoryStoreClaimBatchHonorsLimit(t *testing.T) {
 	t.Parallel()
 	store := outbox.NewMemoryStore()
 	ctx := context.Background()
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		_ = store.Save(ctx, newEnv("evt-"+string(rune('a'+i)), "e"))
 	}
-	batch, _ := store.NextBatch(ctx, 2)
+	batch, _ := store.ClaimBatch(ctx, 2, time.Minute)
 	if len(batch) != 2 {
 		t.Errorf("limited batch len = %d, want 2", len(batch))
 	}
@@ -92,7 +87,7 @@ func TestMemoryStoreMarkDeliveredRemovesFromBatch(t *testing.T) {
 	if err := store.MarkDelivered(ctx, "evt-1"); err != nil {
 		t.Fatalf("MarkDelivered: %v", err)
 	}
-	batch, _ := store.NextBatch(ctx, 10)
+	batch, _ := store.ClaimBatch(ctx, 10, time.Minute)
 	if len(batch) != 1 || batch[0].Envelope.ID != "evt-2" {
 		t.Errorf("after delivered: batch=%v", batch)
 	}
@@ -109,7 +104,7 @@ func TestMemoryStoreMarkFailedIncrementsAttempts(t *testing.T) {
 	if err := store.MarkFailed(ctx, "evt-1", "boom"); err != nil {
 		t.Fatalf("MarkFailed 2: %v", err)
 	}
-	batch, _ := store.NextBatch(ctx, 10)
+	batch, _ := store.ClaimBatch(ctx, 10, time.Minute)
 	if len(batch) != 1 || batch[0].Attempts != 2 {
 		t.Errorf("attempts = %d, want 2; batch=%v", batch[0].Attempts, batch)
 	}
@@ -130,7 +125,7 @@ func TestMemoryStoreDuplicateIdempotencyKey(t *testing.T) {
 	if !errors.Is(err, outbox.ErrDuplicate) {
 		t.Errorf("got %v, want ErrDuplicate", err)
 	}
-	batch, _ := store.NextBatch(ctx, 10)
+	batch, _ := store.ClaimBatch(ctx, 10, time.Minute)
 	if len(batch) != 1 {
 		t.Errorf("dedupe failed: batch=%v", batch)
 	}
@@ -153,8 +148,8 @@ func TestMemoryStoreRespectsCtxCancellation(t *testing.T) {
 	if err := store.Save(ctx, newEnv("evt-1", "e")); !errors.Is(err, context.Canceled) {
 		t.Errorf("Save: %v, want Canceled", err)
 	}
-	if _, err := store.NextBatch(ctx, 1); !errors.Is(err, context.Canceled) {
-		t.Errorf("NextBatch: %v, want Canceled", err)
+	if _, err := store.ClaimBatch(ctx, 1, time.Minute); !errors.Is(err, context.Canceled) {
+		t.Errorf("ClaimBatch: %v, want Canceled", err)
 	}
 	if err := store.MarkDelivered(ctx, "x"); !errors.Is(err, context.Canceled) {
 		t.Errorf("MarkDelivered: %v, want Canceled", err)
@@ -176,7 +171,7 @@ func TestPublishWritesToStore(t *testing.T) {
 	if err := ob.Publish(context.Background(), newEnv("evt-1", "e")); err != nil {
 		t.Fatalf("Publish: %v", err)
 	}
-	batch, _ := store.NextBatch(context.Background(), 10)
+	batch, _ := store.ClaimBatch(context.Background(), 10, time.Minute)
 	if len(batch) != 1 || batch[0].Envelope.ID != "evt-1" {
 		t.Errorf("store contents: %+v", batch)
 	}
@@ -207,10 +202,11 @@ func TestDispatcherForwardsToInnerAndMarksDelivered(t *testing.T) {
 	waitFor(t, 2*time.Second, func() bool {
 		return atomic.LoadInt32(&hits) == 1
 	})
-	waitFor(t, 2*time.Second, func() bool {
-		batch, _ := store.NextBatch(context.Background(), 10)
-		return len(batch) == 0
-	})
+	ob.Stop()
+	batch, _ := store.ClaimBatch(context.Background(), 10, time.Minute)
+	if len(batch) != 0 {
+		t.Fatalf("delivered entry remained claimable: %+v", batch)
+	}
 }
 
 func TestDispatcherMarksFailedOnError(t *testing.T) {
@@ -239,7 +235,8 @@ func TestDispatcherMarksFailedOnError(t *testing.T) {
 	waitFor(t, 2*time.Second, func() bool {
 		return atomic.LoadInt32(&attempts) >= 2
 	})
-	batch, _ := store.NextBatch(context.Background(), 10)
+	ob.Stop()
+	batch, _ := store.ClaimBatch(context.Background(), 10, time.Minute)
 	if len(batch) != 1 {
 		t.Errorf("failed entry should remain pending, got %d", len(batch))
 		return
@@ -254,6 +251,7 @@ func TestDispatcherGivesUpAfterMaxRetries(t *testing.T) {
 	inner := memory.New()
 	defer inner.Close()
 	store := outbox.NewMemoryStore()
+	var dead atomic.Bool
 
 	if _, err := inner.Subscribe("e", func(context.Context, event.Envelope) error {
 		return errors.New("nope")
@@ -265,6 +263,11 @@ func TestDispatcherGivesUpAfterMaxRetries(t *testing.T) {
 		inner, store,
 		outbox.WithDispatchInterval(5*time.Millisecond),
 		outbox.WithMaxRetries(2),
+		outbox.WithErrorHandler(func(_ context.Context, op, _ string, _ error) {
+			if op == "dead_letter" {
+				dead.Store(true)
+			}
+		}),
 	)
 	ob.Start(context.Background())
 	defer ob.Stop()
@@ -274,9 +277,13 @@ func TestDispatcherGivesUpAfterMaxRetries(t *testing.T) {
 	}
 
 	waitFor(t, 2*time.Second, func() bool {
-		batch, _ := store.NextBatch(context.Background(), 10)
-		return len(batch) == 0
+		return dead.Load()
 	})
+	ob.Stop()
+	batch, _ := store.ClaimBatch(context.Background(), 10, time.Minute)
+	if len(batch) != 0 {
+		t.Fatalf("dead-lettered entry remained claimable: %+v", batch)
+	}
 }
 
 func TestDuplicateIdempotencyKeyDeduplicatedAtOutbox(t *testing.T) {
@@ -296,7 +303,7 @@ func TestDuplicateIdempotencyKeyDeduplicatedAtOutbox(t *testing.T) {
 	if err := ob.Publish(context.Background(), env2); err != nil {
 		t.Fatalf("second Publish (dedupe): %v", err)
 	}
-	batch, _ := store.NextBatch(context.Background(), 10)
+	batch, _ := store.ClaimBatch(context.Background(), 10, time.Minute)
 	if len(batch) != 1 {
 		t.Errorf("dedupe failed: batch=%v", batch)
 	}

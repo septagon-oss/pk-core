@@ -1,10 +1,8 @@
-package module_test
+// Validates: REQ-MODULE-001.
+// Per: ADR-0009.
+// Discipline: C-14.
 
-// compose_test.go validates dependency ordering, missing-provider failures,
-// and Pro embedding of OSS module primitives.
-//
-// ADR: ADR-0009 (ports-only module communication), ADR-0017 (composition through dependency injection), ADR-0029 (file purpose declaration).
-// Convention: C-14 (every Go file declares its purpose).
+package module_test
 
 import (
 	"slices"
@@ -47,7 +45,7 @@ func TestComposeOrdersByTypedPorts(t *testing.T) {
 			return module.Must(
 				module.Metadata{ID: "user"},
 				module.WithProvides(module.Provide[UserService]("1.0.0")),
-				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 					Version:           "1.0.0",
 					Purpose:           "audit user lifecycle changes",
 					PreferredProvider: "audit",
@@ -75,7 +73,7 @@ func TestComposeFailsMissingRequiredPort(t *testing.T) {
 		{ID: "user", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "user"},
-				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 					Purpose: "audit user lifecycle changes",
 				})),
 			)
@@ -99,7 +97,7 @@ func TestComposeFailsWhenProviderVersionDoesNotMatch(t *testing.T) {
 		{ID: "content", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "content"},
-				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 					Version: "^2.0.0",
 					Purpose: "audit content",
 				})),
@@ -126,7 +124,7 @@ func TestComposeAllowsFallbackProvider(t *testing.T) {
 		{ID: "content", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "content"},
-				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 					Version:           "^1.0.0",
 					Purpose:           "audit content",
 					PreferredProvider: "audit",
@@ -153,7 +151,7 @@ func TestSortDoesNotTurnOptionalIntegrationsIntoHardCycles(t *testing.T) {
 	audit := module.Must(
 		module.Metadata{ID: "audit"},
 		module.WithProvides(module.Provide[AuditService]("1.0.0")),
-		module.WithDependencies(module.Optional[UserService](module.DependencySpec{
+		module.WithDependencies(module.OptionalPort[UserService](module.PortSpec{
 			Version: "^1.0.0",
 			Purpose: "enrich audit events with user context",
 		})),
@@ -161,7 +159,7 @@ func TestSortDoesNotTurnOptionalIntegrationsIntoHardCycles(t *testing.T) {
 	user := module.Must(
 		module.Metadata{ID: "user"},
 		module.WithProvides(module.Provide[UserService]("1.0.0")),
-		module.WithDependencies(module.Optional[AuditService](module.DependencySpec{
+		module.WithDependencies(module.OptionalPort[AuditService](module.PortSpec{
 			Version: "^1.0.0",
 			Purpose: "record optional user lifecycle audit events",
 		})),
@@ -182,7 +180,7 @@ func TestSortUsesOneProviderPerRequiredPortToAvoidFalseCycles(t *testing.T) {
 	auditDecorated := module.Must(
 		module.Metadata{ID: "audit_a"},
 		module.WithProvides(module.Provide[AuditService]("1.0.0")),
-		module.WithDependencies(module.Require[ContentService](module.DependencySpec{
+		module.WithDependencies(module.RequiresPort[ContentService](module.PortSpec{
 			Version: "^1.0.0",
 			Purpose: "decorate audit events with rendered content",
 		})),
@@ -194,7 +192,7 @@ func TestSortUsesOneProviderPerRequiredPortToAvoidFalseCycles(t *testing.T) {
 	content := module.Must(
 		module.Metadata{ID: "content"},
 		module.WithProvides(module.Provide[ContentService]("1.0.0")),
-		module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+		module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 			Version: "^1.0.0",
 			Purpose: "audit content changes",
 		})),
@@ -219,7 +217,7 @@ func TestComposeRejectsUnlistedProviderWhenPreferredProviderIsDeclared(t *testin
 		{ID: "content", New: func() module.Composable {
 			return module.Must(
 				module.Metadata{ID: "content"},
-				module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+				module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 					Version:           "^1.0.0",
 					Purpose:           "audit content",
 					PreferredProvider: "audit",
@@ -247,7 +245,7 @@ func TestSortFailsOnInvalidProviderVersion(t *testing.T) {
 	}))
 	content := module.Must(
 		module.Metadata{ID: "content"},
-		module.WithDependencies(module.Require[AuditService](module.DependencySpec{Version: ">=1.0.0"})),
+		module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{Version: ">=1.0.0"})),
 	)
 
 	_, err := module.Sort([]module.Composable{content, audit})
@@ -332,7 +330,7 @@ func TestProModuleCanEmbedOSSModule(t *testing.T) {
 
 	base := module.Must(
 		module.Metadata{ID: "billing"},
-		module.WithDependencies(module.Require[AuditService](module.DependencySpec{
+		module.WithDependencies(module.RequiresPort[AuditService](module.PortSpec{
 			Purpose:           "audit invoice events",
 			PreferredProvider: "audit",
 		})),

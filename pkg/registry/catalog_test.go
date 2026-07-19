@@ -32,25 +32,6 @@ func TestCatalogBuilderRejectsDuplicateKeys(t *testing.T) {
 	}
 }
 
-func TestCatalogBuilderConflictPolicies(t *testing.T) {
-	first := NewCatalogBuilder[string, int](
-		WithCatalogConflictPolicy[string, int](ConflictFirstWins),
-	).Add("key", 1, "first").Add("key", 2, "second").MustBuild()
-	if got, _ := first.Lookup("key"); got != 1 {
-		t.Fatalf("ConflictFirstWins value = %d; want 1", got)
-	}
-
-	last := NewCatalogBuilder[string, int](
-		WithCatalogConflictPolicy[string, int](ConflictLastWins),
-	).Add("key", 1, "first").Add("key", 2, "second").MustBuild()
-	if got, _ := last.Lookup("key"); got != 2 {
-		t.Fatalf("ConflictLastWins value = %d; want 2", got)
-	}
-	if source := last.Source("key"); source != "second" {
-		t.Fatalf("Source = %q; want second", source)
-	}
-}
-
 func TestCatalogBuilderNormalizesValidatesAndSorts(t *testing.T) {
 	catalog, err := NewCatalogBuilder[string, int](
 		WithCatalogSpec[string, int](Spec{
@@ -117,13 +98,6 @@ func TestCatalogBuilderValidationErrors(t *testing.T) {
 	).Add("key", 1, "source").Build()
 	if err == nil || !strings.Contains(err.Error(), "bad value") {
 		t.Fatalf("value validation error = %v; want bad value", err)
-	}
-
-	_, err = NewCatalogBuilder[string, int](
-		WithCatalogConflictPolicy[string, int](ConflictPolicy(99)),
-	).Build()
-	if err == nil || !strings.Contains(err.Error(), "unknown conflict policy") {
-		t.Fatalf("conflict policy error = %v; want unknown conflict policy", err)
 	}
 
 	_, err = NewCatalogBuilder[string, int](
