@@ -1,5 +1,9 @@
 # pk-core
 
+> Part of [PlatformKit](https://github.com/septagon-oss/platformkit) — the open-source Go backend for multi-tenant SaaS.
+
+**Depends on.** Nothing else in PlatformKit. It is a leaf in the dependency graph (as is `pk-shared`); its only external requirement is `golang.org/x/crypto`.
+
 [![Go Reference](https://pkg.go.dev/badge/github.com/septagon-oss/pk-core.svg)](https://pkg.go.dev/github.com/septagon-oss/pk-core)
 [![CI](https://github.com/septagon-oss/pk-core/actions/workflows/go.yml/badge.svg)](https://github.com/septagon-oss/pk-core/actions/workflows/go.yml)
 [![License: Apache-2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
@@ -78,6 +82,9 @@ func main() {
   `Compose`/`Validate`/`Sort`.
 - `pkg/registry` — thread-safe `Registry` plus declarative `CatalogBuilder`
   catalogs with conflict policy, validation hooks, and structured diagnostics.
+- `pkg/event` — provider-neutral event-bus contract (`Envelope`, `Handler`,
+  `Subscription`, `Bus`) with in-process (`event/memory`) and durable
+  transactional-outbox (`event/outbox`) implementations.
 - `pkg/authz` — provider-neutral policy declarations and evaluator contracts.
 - `pkg/entity` — entity descriptors, fields, relationships, capabilities, and
   policy-token requirements.
@@ -87,6 +94,13 @@ func main() {
 - `pkg/resilience` — retry, circuit-breaker, and bulkhead primitives.
 - `pkg/security` — cookies, password hashing, signatures, security headers,
   CORS, CSRF, request identity, and rate limiting.
+- `pkg/infrastructure` — provider-neutral infrastructure contracts with
+  stdlib-only defaults: key-value `cache`, canonical app `config` with a
+  JSON-file + environment loader, driver-agnostic `database` wrapper over
+  `*sql.DB`, and an HTTP `router` over `net/http.ServeMux`.
+- `pkg/architecture` — executable architecture fitness tests: the
+  allowed-external-deps gate, extensibility rubric, and block-manifest
+  validation that keep this surface small.
 
 These packages are contracts, not product implementations. Concrete providers,
 repositories, admin screens, workflows, and HTTP hosts belong in modules,
