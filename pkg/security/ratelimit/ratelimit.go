@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package ratelimit — ratelimit.go owns the Limiter interface, the
 // LimiterFunc adapter, and the ClientIPKey helper. These are the
 // extension surfaces the rest of the package — and downstream Pro

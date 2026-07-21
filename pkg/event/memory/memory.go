@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package memory — memory.go owns the public surface of the in-process
 // event bus: the New constructor, the Option type and its constructors
 // (WithAsync, WithErrorReporter), and the unexported bus and subscription

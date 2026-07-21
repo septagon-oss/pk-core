@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package bulkhead — bulkhead.go owns the entire public surface: the
 // ErrFull sentinel, the Config struct, the Bulkhead interface, the New
 // constructor, and the default semaphore implementation that backs them.

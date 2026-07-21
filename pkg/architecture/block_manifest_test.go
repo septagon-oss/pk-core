@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package architecture_test
 
 // block_manifest_test.go makes the public block inventory executable: every

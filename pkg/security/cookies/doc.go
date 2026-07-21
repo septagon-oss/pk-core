@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cookies centralizes HTTP cookie writing for PlatformKit.
 //
 // # Why this package exists

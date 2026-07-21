@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package csrf provides HTTP middleware that enforces the double-submit
 // cookie pattern for CSRF protection.
 //

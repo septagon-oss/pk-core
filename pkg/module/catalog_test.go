@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package module_test
 
 // catalog_test.go validates bundle catalog construction, duplicate handling,

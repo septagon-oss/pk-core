@@ -1,4 +1,4 @@
-// Validates: REQ-EVENT-001.
+// Validates: REQ-PORTS-012.
 // Per: ADR-0029.
 // Discipline: C-14.
 

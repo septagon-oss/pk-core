@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package tracing defines the PlatformKit OSS tracing contract.
 //
 // The default Tracer is Noop. OpenTelemetry, Jaeger, and Zipkin adapters live

@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package tracing — logger.go provides a logger.ContextExtractor that emits
 // the active span's trace_id and span_id as structured log attrs.
 //

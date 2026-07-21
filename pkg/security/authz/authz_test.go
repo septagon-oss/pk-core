@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authz_test — authz_test.go is the external contract test
 // suite for the security/authz package. It exercises Middleware
 // decision mapping, RequestBuilder/Func behaviour, the

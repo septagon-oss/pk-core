@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package entity defines provider-neutral entity descriptors for PlatformKit.
 package entity
 

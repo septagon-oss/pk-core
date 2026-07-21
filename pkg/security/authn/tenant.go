@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authn — tenant.go owns RequireTenant, the middleware that
 // rejects principals whose TenantID does not match a fixed tenant ID
 // (or whose TenantID is empty) with 403 Forbidden.

@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cookies — options.go owns the Option functional-options type and
 // every WithFoo helper. Splitting options into their own file keeps the
 // extension surface obvious: downstream Pro adds new per-call hooks here,

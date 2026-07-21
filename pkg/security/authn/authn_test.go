@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authn_test — authn_test.go is the external contract test suite
 // for the authn package. It exercises every exported middleware
 // (RequireAuth, RequireScopes, RequireTenant, RequireAllOf), the Options

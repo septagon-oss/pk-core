@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authn — compose.go owns RequireAllOf, the Block-level composer
 // that runs several require-middlewares as a single short-circuiting
 // pipeline.

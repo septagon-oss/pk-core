@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package event — event.go owns the public surface of the event-bus
 // contract: the Envelope value type, its Validate normalization, the
 // Handler callable, the Subscription handle, the Bus interface, and the
@@ -27,8 +31,8 @@ const DefaultDataMediaType = "application/json"
 // All fields are public so callers can construct, mutate, and copy an
 // envelope without reflection. The bus treats Envelope as a value: handlers
 // receive a defensive copy from the bus implementation, never a pointer to
-// shared mutable state. Adding fields to Envelope is a backward-compatible
-// change — handlers read fields by name and ignore unknown ones.
+// shared mutable state. Handlers read fields by name and ignore fields they do
+// not consume, so the envelope remains schema-extensible.
 type Envelope struct {
 	// ID is the unique event identifier (UUID recommended). Required.
 	// The bus does not generate IDs; emitters own that decision.

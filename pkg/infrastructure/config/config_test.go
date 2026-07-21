@@ -1,3 +1,7 @@
+// Validates: REQ-010.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package config_test exercises the config contract from outside the
 // package: it imports only the published surface (Config + nested
 // structs, DefaultConfig, LoadFromJSON, LoadFromEnv, Validate, sentinel

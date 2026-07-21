@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cors provides an origin-allowlist Cross-Origin Resource Sharing
 // HTTP middleware.
 //

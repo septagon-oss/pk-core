@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package router_test exercises the router contract from outside the
 // package: it imports only the published surface (Router, NewServeMux)
 // and validates routing + middleware behavior with httptest.

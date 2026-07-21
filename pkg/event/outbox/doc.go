@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0007.
+// Discipline: C-14.
+
 // Package outbox ships the durable transactional outbox primitive for the
 // PlatformKit event bus: Publish writes envelopes to a Store first, then a
 // background dispatcher reads claimed entries and forwards them to an

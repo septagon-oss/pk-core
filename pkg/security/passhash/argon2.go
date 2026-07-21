@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package passhash — argon2.go provides Argon2idHasher. Parameters follow
 // OWASP 2024+ guidance (memory 64MiB, iterations 3, parallelism 4, key length
 // 32, salt length 16). Encoded format is the standard PHC string format:

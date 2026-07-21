@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package headers provides HTTP middleware that applies a security-header
 // response policy and attaches a per-request Content-Security-Policy nonce
 // to the request context.

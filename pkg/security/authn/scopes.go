@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authn — scopes.go owns RequireScopes, the middleware that
 // rejects principals missing any of a required scope set with 403
 // Forbidden (and 401 when the principal is anonymous).

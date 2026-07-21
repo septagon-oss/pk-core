@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package module
 
 // catalog.go owns bundle-to-catalog composition so OSS and Pro module packs

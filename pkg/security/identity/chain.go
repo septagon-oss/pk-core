@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package identity — chain.go owns the Chain composition helper. Chain
 // returns an IdentityResolver that consults its children in order and
 // returns the first non-anonymous principal, allowing apps to mix

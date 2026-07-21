@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package registry
 
 // catalog_test.go validates declarative registry catalog conflict handling,

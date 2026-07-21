@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package router — router.go owns the public surface of the router
 // contract: the Router interface, the NewServeMux constructor, and the
 // unexported serveMuxRouter implementation that satisfies Router using

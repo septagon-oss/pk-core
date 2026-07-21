@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package circuitbreaker implements the closed/open/half-open state
 // machine that short-circuits calls to a failing downstream and probes
 // for recovery without re-overwhelming it.

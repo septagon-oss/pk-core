@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package signature — hmac.go provides HMACSigner: an HMAC-SHA256 Signer
 // with hex-encoded output. The minimum accepted key length is 32 bytes
 // (256 bits) per RFC 2104 §3, which is also the SHA-256 output size — keys

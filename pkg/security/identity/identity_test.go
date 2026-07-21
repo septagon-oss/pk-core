@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package identity_test — identity_test.go is the external contract test
 // suite for the identity package. It exercises the Composable + Chainable
 // properties of Principal, the context plumbing, IdentityResolver,

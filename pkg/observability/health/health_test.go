@@ -1,3 +1,7 @@
+// Validates: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package health_test
 
 // health_test.go validates the Registry: registering checkers, aggregating

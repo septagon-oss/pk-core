@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cors_test — cors_test.go is the external contract test suite
 // for the cors package. Tests exercise the observable properties of the
 // Composable + Chainable contract: preflight allow + reject, simple

@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package health defines PlatformKit's provider-neutral health-check contract.
 //
 // health.go owns the public types: Status, Checker, ComponentResult, Result,

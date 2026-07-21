@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package authz
 
 // authz_test.go validates policy normalization, policy decisions, aggregate

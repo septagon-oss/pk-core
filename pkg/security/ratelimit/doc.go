@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package ratelimit provides the Limiter contract, an in-memory
 // TokenBucket implementation, and HTTP middleware that combines them.
 //

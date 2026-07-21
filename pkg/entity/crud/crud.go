@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package crud — crud.go owns the public surface of the generic CRUD
 // handler block: the Store[T] persistence contract, the ListFilter
 // query shape, the sentinel error values, the Options[T] configuration

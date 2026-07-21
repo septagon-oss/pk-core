@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cache defines the provider-neutral key-value cache contract for
 // the PlatformKit OSS kernel and ships an in-process default backed by
 // sync.Map + a doubly-linked LRU list.

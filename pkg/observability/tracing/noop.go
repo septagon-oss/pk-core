@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package tracing
 
 // noop.go provides a zero-allocation Tracer for tests and disabled paths.

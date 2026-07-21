@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package retry — backoff.go owns the inter-attempt delay calculation:
 // exponential growth from InitialDelay by Multiplier, clamped at MaxDelay,
 // then multiplicative jitter applied symmetrically. Isolating the math

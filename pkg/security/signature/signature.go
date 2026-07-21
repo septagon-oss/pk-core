@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package signature — signature.go owns the Signer interface that every
 // implementation in this package and downstream Pro packages must satisfy.
 // Keeping the contract in its own file makes the extension surface obvious

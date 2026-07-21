@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package csrf — csrf.go owns the Config struct, the Middleware factory,
 // and the double-submit validation/rotation logic. Cookie writes are
 // delegated to pk-core/pkg/security/cookies with KindCSRF so the

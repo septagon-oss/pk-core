@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package database wraps *sql.DB behind a Driver-agnostic contract so
 // OSS callers can construct, ping, and close a database the same way
 // across sqlite, postgres, mysql, and any future driver.

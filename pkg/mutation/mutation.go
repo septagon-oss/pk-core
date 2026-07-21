@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package mutation defines the core governed-mutation contract.
 package mutation
 

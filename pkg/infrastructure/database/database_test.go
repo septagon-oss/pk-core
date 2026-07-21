@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package database_test exercises the database wrapper from outside the
 // package using a tiny stdlib-only mock driver so we exercise the full
 // Open / DB / Ping / Close lifecycle without adding a real driver dep.

@@ -1,5 +1,5 @@
-// Implements: REQ-REGISTRY-001.
-// Per: ADR-0061.
+// Implements: REQ-002.
+// Per: ADR-0009.
 // Discipline: C-14.
 
 package registry

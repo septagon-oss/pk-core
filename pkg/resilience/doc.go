@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package resilience groups PlatformKit's fault-tolerance primitives.
 //
 // # Why this package exists

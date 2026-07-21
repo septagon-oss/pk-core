@@ -1,3 +1,7 @@
+// Validates: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package logger_test
 
 // logger_test.go validates the Logger contract: levels record, With() returns

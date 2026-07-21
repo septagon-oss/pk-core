@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 // Package module provides the minimal public PlatformKit module composition
 // framework.
 package module

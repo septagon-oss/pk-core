@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package identity centralizes the Principal abstraction every PlatformKit
 // authentication module reads from request context.
 //

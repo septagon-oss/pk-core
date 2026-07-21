@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0007.
+// Discipline: C-14.
+
 // Package outbox — sql_store.go owns the database/sql-backed Store
 // implementation. The caller supplies a *sql.DB (and therefore the
 // driver); pk-core stays driver-agnostic. The SchemaSQL constant exports

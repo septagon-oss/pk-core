@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package health defines the PlatformKit OSS health-check contract.
 //
 // Usage:

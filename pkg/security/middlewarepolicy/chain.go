@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package middlewarepolicy — chain.go owns Chain, the associative
 // composer that turns a list of middlewares into a single middleware
 // value whose outermost element is mws[0].

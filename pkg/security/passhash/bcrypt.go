@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package passhash — bcrypt.go provides the BcryptHasher implementation. Cost
 // is enforced at construction time to prevent silent downgrades; the OWASP
 // 2024+ minimum (12) is the package floor.

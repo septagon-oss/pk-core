@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authz provides HTTP middleware that bridges an *http.Request
 // to pk-core/pkg/authz's provider-neutral Evaluator contract.
 //

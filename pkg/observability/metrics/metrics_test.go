@@ -1,3 +1,7 @@
+// Validates: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package metrics_test
 
 // metrics_test.go validates the Metrics contract: Counter increments, Gauge

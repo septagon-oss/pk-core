@@ -1,4 +1,4 @@
-// Implements: REQ-MODULE-001.
+// Implements: REQ-002.
 // Per: ADR-0009.
 // Discipline: C-14.
 
@@ -77,10 +77,9 @@ func dependencyOf[T any](spec PortSpec) Dependency {
 type PortVersion string
 
 // ValidatePortVersion reports whether a provided port version is syntactically
-// valid. Empty versions are allowed and are treated as 0.0.0 by compatibility
-// checks. Pre-release and build metadata are accepted but ignored for
-// compatibility comparisons; port versions represent API shape, not release
-// channel.
+// valid. Producer versions are mandatory. Pre-release and build metadata are
+// accepted but ignored for compatibility comparisons; port versions represent
+// API shape, not release channel.
 func ValidatePortVersion(version PortVersion) error {
 	_, err := parseSemver(string(version))
 	return err
@@ -94,19 +93,18 @@ func ValidateVersionConstraint(constraint string) error {
 }
 
 // MatchesVersion reports whether a producer's version satisfies a dependency
-// constraint. Empty constraints and "*" match anything. Empty producer versions
-// are treated as 0.0.0.
+// constraint. Empty constraints and "*" match any valid producer version.
 func MatchesVersion(producer PortVersion, constraint string) (bool, error) {
 	parsed, err := parseVersionConstraint(constraint)
 	if err != nil {
 		return false, err
 	}
-	if len(parsed) == 0 {
-		return true, nil
-	}
 	have, err := parseSemver(string(producer))
 	if err != nil {
 		return false, fmt.Errorf("invalid producer version %q: %w", producer, err)
+	}
+	if len(parsed) == 0 {
+		return true, nil
 	}
 	for _, comp := range parsed {
 		if !comp.matches(have) {
@@ -144,7 +142,7 @@ func (a semver) cmp(b semver) int {
 func parseSemver(s string) (semver, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
-		return semver{}, nil
+		return semver{}, fmt.Errorf("version is required")
 	}
 	s, _ = strings.CutPrefix(s, "v")
 	if s == "" {

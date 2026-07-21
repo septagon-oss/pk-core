@@ -1,3 +1,7 @@
+// Implements: REQ-010.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package config — config.go owns the public surface of the config
 // contract: the Config struct + nested HTTP/Database/Cache sections,
 // the DefaultConfig constructor, the LoadFromJSON loader, the

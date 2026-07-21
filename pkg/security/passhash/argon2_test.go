@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package passhash_test
 
 // argon2_test.go validates Argon2idHasher contract conformance and

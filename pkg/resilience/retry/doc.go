@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package retry provides a configurable Retrier that re-runs a fallible
 // Operation under a Policy describing how many attempts to make, how to
 // space them out, and which errors are worth retrying.

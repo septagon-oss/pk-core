@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authz defines PlatformKit's provider-neutral authorization contract.
 package authz
 

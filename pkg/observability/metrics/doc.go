@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package metrics defines the PlatformKit OSS metrics contract.
 //
 // Three primitives — Counter, Gauge, Histogram — keyed by name and optional

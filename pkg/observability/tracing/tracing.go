@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package tracing defines PlatformKit's provider-neutral tracing contract.
 //
 // tracing.go owns the Tracer and Span interfaces and the context-key plumbing

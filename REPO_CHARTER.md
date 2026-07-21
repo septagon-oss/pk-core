@@ -32,4 +32,6 @@ Every PlatformKit module, app, and distribution builds on these types.
 
 ## Release Posture
 
-Backward-compatible within the v0.x line. Breaking changes increment the minor version.
+Forward-only within the v0.x line. Replacements migrate every owned caller and
+remove the superseded API in the same change; release notes identify deliberate
+breaking changes without retaining compatibility shims.

@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cors — cors.go owns the Config struct and the Middleware factory.
 // The factory captures the allowlist by defensive copy so callers cannot
 // mutate the slice after construction to widen access.

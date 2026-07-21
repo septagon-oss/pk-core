@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package metrics defines PlatformKit's provider-neutral metrics interface.
 //
 // metrics.go owns the public Metrics contract and the three primitive types:

@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package registry
 
 // rule_registry_test.go validates deterministic rule priority ordering and

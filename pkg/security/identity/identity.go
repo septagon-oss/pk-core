@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package identity — identity.go owns the Principal value type, the
 // request-context plumbing (ContextWithPrincipal, PrincipalFromContext),
 // and the IdentityResolver interface plus its ResolverFunc adapter. These

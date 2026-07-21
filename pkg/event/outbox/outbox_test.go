@@ -1,5 +1,5 @@
-// Validates: REQ-EVENT-001.
-// Per: ADR-0049.
+// Validates: REQ-PORTS-012.
+// Per: ADR-0007.
 // Discipline: C-14.
 
 package outbox_test

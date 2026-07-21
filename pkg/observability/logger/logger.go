@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package logger defines PlatformKit's structured logger interface.
 //
 // logger.go owns the public Logger contract: level-aware structured logging

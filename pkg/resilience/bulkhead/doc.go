@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package bulkhead implements a concurrency-limiting semaphore that caps
 // in-flight work to a fixed number of slots and optionally queues callers
 // up to a bounded depth before failing fast with ErrFull.

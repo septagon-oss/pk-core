@@ -1,5 +1,5 @@
-// Validates: REQ-REGISTRY-001.
-// Per: ADR-0061.
+// Validates: REQ-002.
+// Per: ADR-0009.
 // Discipline: C-14.
 
 package registry

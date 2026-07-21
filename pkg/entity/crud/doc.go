@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package crud provides a generic, stdlib-only HTTP CRUD handler block
 // for entities of any type T. A Handler is parameterized by a Store[T]
 // implementation and mounted on a router.Router; the five canonical REST

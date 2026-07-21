@@ -1,3 +1,7 @@
+// Validates: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package guardrail_test
 
 // guardrail_test.go validates that every Warn call emits the standard

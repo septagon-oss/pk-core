@@ -1,3 +1,7 @@
+// Implements: REQ-010.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package config defines the canonical OSS app config for PlatformKit
 // and ships a stdlib-only loader (JSON file + environment overrides).
 //

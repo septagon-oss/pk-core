@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authz — authz.go owns the Options type, the RequestBuilder
 // interface plus its function adapter, and the Middleware factory that
 // runs an authz.Evaluator against an *http.Request.

@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package ratelimit — middleware.go owns the Config struct and the
 // Middleware factory that binds any Limiter implementation to the
 // standard func(http.Handler) http.Handler shape. The factory captures

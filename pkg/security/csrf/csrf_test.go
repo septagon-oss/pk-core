@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package csrf_test — csrf_test.go is the external contract test suite
 // for the csrf package. Tests exercise the observable properties of the
 // Composable + Chainable contract: safe-method exemption, unsafe-method

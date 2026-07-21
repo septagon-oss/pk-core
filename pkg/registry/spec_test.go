@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package registry
 
 // spec_test.go validates registry metadata normalization and structured

@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0007.
+// Discipline: C-14.
+
 // Package outbox — outbox.go owns the Outbox struct + Option type + its
 // public methods (Publish, Subscribe, Close, Start, Stop). The dispatcher
 // loop runs in a goroutine launched by Start; it claims work from the

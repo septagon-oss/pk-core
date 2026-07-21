@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package database — database.go owns the public surface of the
 // database wrapper: the Database interface, the Open constructor, the
 // Option type, and the pool-tuning option constructors.

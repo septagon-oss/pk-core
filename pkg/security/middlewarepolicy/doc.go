@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package middlewarepolicy provides composition primitives for HTTP
 // middleware chains: Chain to compose multiple middlewares into one,
 // SkipIf to conditionally skip a middleware, and a small library of

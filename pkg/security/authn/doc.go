@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authn provides HTTP middleware that enforces authentication
 // requirements on top of the Principal attached by pk-core/pkg/security/identity.
 //

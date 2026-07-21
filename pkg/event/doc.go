@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package event defines the provider-neutral event-bus contract for the
 // PlatformKit OSS kernel: the Envelope value type that carries event
 // metadata, the Handler callable that processes deliveries, the Subscription

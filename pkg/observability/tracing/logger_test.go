@@ -1,3 +1,7 @@
+// Validates: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package tracing_test
 
 // logger_test.go validates that LoggerExtractor returns trace/span ids when a

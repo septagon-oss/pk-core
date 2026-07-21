@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package identity — middleware.go owns the Middleware factory that
 // adapts an IdentityResolver to the standard func(http.Handler) http.Handler
 // shape so the resolver chain plugs into any router or middleware stack

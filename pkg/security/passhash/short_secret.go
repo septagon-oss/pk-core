@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package passhash — short_secret.go hashes short, high-entropy values like
 // 2FA backup codes or recovery codes using HMAC-SHA256 with a server-side
 // pepper. bcrypt and argon2id are the wrong tool for these inputs because

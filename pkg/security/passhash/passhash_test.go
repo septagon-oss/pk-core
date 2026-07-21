@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package passhash_test
 
 // passhash_test.go provides SaltedHasherContract, the shared TDD harness

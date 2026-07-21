@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package registry
 
 // rule_registry.go owns deterministic priority-ordered string rule matching

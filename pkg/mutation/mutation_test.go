@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package mutation
 
 // mutation_test.go validates mutation intent normalization, rule-gate

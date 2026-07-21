@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package router defines the provider-neutral HTTP router contract for
 // the PlatformKit OSS kernel and ships a stdlib net/http.ServeMux
 // default that exploits the Go 1.22+ method+pattern syntax.

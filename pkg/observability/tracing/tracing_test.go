@@ -1,3 +1,7 @@
+// Validates: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package tracing_test
 
 // tracing_test.go validates the Tracer contract: Start returns a child

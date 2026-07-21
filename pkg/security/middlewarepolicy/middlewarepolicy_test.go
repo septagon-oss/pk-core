@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package middlewarepolicy_test — middlewarepolicy_test.go is the
 // external contract test suite for the middlewarepolicy package. It
 // exercises Chain ordering and identity semantics, SkipIf behaviour,

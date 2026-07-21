@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authz — principal.go owns PrincipalFromRequest, the
 // convenience helper that maps an identity.Principal attached to a
 // request into the coreauthz.Principal shape RequestBuilders need.

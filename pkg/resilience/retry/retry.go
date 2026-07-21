@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package retry — retry.go owns the public surface: the Operation
 // callable, the Policy config, DefaultPolicy/Validate, the Retrier
 // interface, the New constructor, and the package-level Do helper.

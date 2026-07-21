@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0007.
+// Discipline: C-14.
+
 // Package outbox — store.go owns the Store interface that backs the
 // transactional outbox and the ErrDuplicate sentinel used by Save to
 // communicate idempotent suppression. Concrete Store implementations

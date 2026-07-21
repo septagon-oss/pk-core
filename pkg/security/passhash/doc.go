@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package passhash defines PlatformKit's password hashing contract.
 //
 // # The Hasher interface

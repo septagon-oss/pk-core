@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package crud_test exercises the generic CRUD handler block from
 // outside the package: it imports only the published surface (Store,
 // Handler, New, Options, sentinel errors) and validates all five REST

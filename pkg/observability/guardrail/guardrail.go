@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package guardrail standardizes warning logs emitted when PlatformKit takes a
 // safe fallback or degraded execution path to keep the system operating.
 //

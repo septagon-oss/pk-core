@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cache — cache.go owns the public surface of the cache contract:
 // the Cache interface that every implementation satisfies, the Memory
 // constructor + MemoryOption functional-option type, and the option

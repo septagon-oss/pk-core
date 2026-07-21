@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package health
 
 // registry.go provides the default in-memory Registrar. Component results are

@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package logger
 
 // noop.go provides a zero-allocation, always-disabled Logger for tests and

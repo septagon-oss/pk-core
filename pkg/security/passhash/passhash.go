@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package passhash provides PlatformKit's provider-neutral password hashing
 // contract. Default implementations cover long passwords (bcrypt, argon2id)
 // and short high-entropy secrets like 2FA backup codes (HMAC-SHA256 with a

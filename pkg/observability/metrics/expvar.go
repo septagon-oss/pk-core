@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package metrics
 
 // expvar.go provides a stdlib expvar-backed Metrics implementation.

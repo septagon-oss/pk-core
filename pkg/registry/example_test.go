@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package registry_test
 
 // example_test.go provides runnable godoc examples for building immutable

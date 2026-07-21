@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package logger
 
 // slog.go wraps *slog.Logger to satisfy the OSS Logger contract using only the

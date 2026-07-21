@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package module_test
 
 // dependency_test.go validates typed port dependency declarations and version
@@ -176,7 +180,6 @@ func TestMatchesVersionRejectsMalformed(t *testing.T) {
 
 func TestValidatePortVersion(t *testing.T) {
 	valid := []module.PortVersion{
-		"",
 		"1",
 		"1.2",
 		"1.2.3",
@@ -191,6 +194,7 @@ func TestValidatePortVersion(t *testing.T) {
 	}
 
 	invalid := []module.PortVersion{
+		"",
 		"v",
 		"+build",
 		"-pre",
@@ -215,12 +219,8 @@ func TestProvideDefersInvalidProviderVersionToCompositionValidation(t *testing.T
 	}
 }
 
-func TestMatchesVersionEmptyProducerTreatedAsZero(t *testing.T) {
-	got, err := module.MatchesVersion("", ">=1.0.0")
-	if err != nil {
-		t.Fatalf("err: %v", err)
-	}
-	if got {
-		t.Error("expected empty producer to fail >=1.0.0")
+func TestMatchesVersionRejectsEmptyProducer(t *testing.T) {
+	if _, err := module.MatchesVersion("", ""); err == nil {
+		t.Fatal("MatchesVersion accepted an implicit producer version")
 	}
 }

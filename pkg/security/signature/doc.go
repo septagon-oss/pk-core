@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package signature defines PlatformKit's provider-neutral payload-signing
 // contract and ships an HMAC-SHA256 default implementation.
 //

@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package registry
 
 // spec.go owns registry contract metadata and structured diagnostics used by

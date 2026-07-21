@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package authn — authn.go owns the Options type, the default error writer,
 // and RequireAuth, the baseline middleware that rejects anonymous principals
 // with 401 Unauthorized.

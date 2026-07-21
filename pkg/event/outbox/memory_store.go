@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0007.
+// Discipline: C-14.
+
 // Package outbox — memory_store.go owns the in-memory Store
 // implementation used by tests and small single-process deployments.
 // State lives in a slice (preserving insertion order for FIFO dispatch)

@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package security defines PlatformKit's provider-neutral security primitives.
 //
 // Sub-packages own one concern each:

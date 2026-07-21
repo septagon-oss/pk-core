@@ -1,3 +1,7 @@
+// Validates: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package passhash_test
 
 // bcrypt_test.go validates BcryptHasher: it satisfies SaltedHasherContract,

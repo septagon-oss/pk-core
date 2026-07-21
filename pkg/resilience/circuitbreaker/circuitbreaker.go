@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package circuitbreaker — circuitbreaker.go owns the entire public
 // surface for this primitive: the State enum, the ErrOpen sentinel, the
 // Config struct, the Breaker interface, the New constructor, and the

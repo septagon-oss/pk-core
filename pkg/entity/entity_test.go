@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 package entity
 
 // entity_test.go validates descriptor normalization, policy extraction, and

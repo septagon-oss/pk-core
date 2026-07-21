@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package crud — encoding.go owns the private JSON encode/decode and
 // ID-extraction helpers, plus the default Options implementations
 // (IDExtractor, ListFilterParser, ErrorRenderer). Keeping these out of

@@ -1,3 +1,7 @@
+// Implements: REQ-PORTS-012.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package memory ships the in-process event.Bus implementation: a fan-out
 // publisher that holds subscriptions in a map under sync.RWMutex and
 // delivers envelopes either synchronously on the publisher's goroutine

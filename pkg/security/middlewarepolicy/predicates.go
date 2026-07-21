@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package middlewarepolicy — predicates.go owns the Predicate type,
 // the SkipIf wrapper, and the built-in predicates PathPrefixSkip,
 // MethodSkip, and BearerAuthSkip.

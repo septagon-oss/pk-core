@@ -1,3 +1,7 @@
+// Implements: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package module
 
 // compose.go owns dependency validation and ordering for selected module sets.

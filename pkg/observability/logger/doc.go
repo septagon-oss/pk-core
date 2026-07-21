@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package logger defines the PlatformKit OSS structured logger contract.
 //
 // Usage:

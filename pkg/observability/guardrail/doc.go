@@ -1,3 +1,7 @@
+// Implements: REQ-009.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package guardrail emits standardized warnings when PlatformKit takes a
 // fallback or degraded path. Monitoring systems can scrape on
 // guardrail=true to surface "I kept working but something is wrong"

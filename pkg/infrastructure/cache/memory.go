@@ -1,3 +1,7 @@
+// Implements: REQ-014.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cache — memory.go implements the in-process default Cache.
 //
 // Storage is a map[string]*entry guarded by a sync.Mutex. A doubly-linked

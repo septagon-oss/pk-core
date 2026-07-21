@@ -1,3 +1,7 @@
+// Validates: REQ-002.
+// Per: ADR-0009.
+// Discipline: C-14.
+
 package architecture_test
 
 // oss_deps_test.go is the central allowed-deps fitness gate for pk-core.

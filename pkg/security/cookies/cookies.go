@@ -1,3 +1,7 @@
+// Implements: REQ-005.
+// Per: ADR-0029.
+// Discipline: C-14.
+
 // Package cookies — cookies.go owns the Kind enum, the per-Kind profile
 // table, the Settings struct, and the public builder/writer functions
 // (Build, BuildClear, Write, Clear, Name). The profile table is the single
