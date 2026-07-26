@@ -29,6 +29,7 @@ func (c *captureLogger) Debug(context.Context, string, ...any) {}
 func (c *captureLogger) Info(context.Context, string, ...any)  {}
 func (c *captureLogger) Error(context.Context, string, ...any) {}
 func (c *captureLogger) With(...any) logger.Logger             { return c }
+func (c *captureLogger) WithCallerSkip(int) logger.Logger      { return c }
 func (c *captureLogger) Enabled(context.Context, slog.Level) bool {
 	return true
 }

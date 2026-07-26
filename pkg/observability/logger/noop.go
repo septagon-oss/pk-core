@@ -25,4 +25,5 @@ func (noopLogger) Info(context.Context, string, ...any)     {}
 func (noopLogger) Warn(context.Context, string, ...any)     {}
 func (noopLogger) Error(context.Context, string, ...any)    {}
 func (noopLogger) With(...any) Logger                       { return noopLogger{} }
+func (noopLogger) WithCallerSkip(int) Logger                { return noopLogger{} }
 func (noopLogger) Enabled(context.Context, slog.Level) bool { return false }

@@ -30,6 +30,14 @@ type Logger interface {
 	// With returns a child Logger that inherits the given attrs on every record.
 	With(args ...any) Logger
 
+	// WithCallerSkip returns a child Logger that attributes each record's source
+	// to a caller `skip` additional frames up the stack. Transparent wrapper
+	// layers (adapters that forward Debug/Info/Warn/Error to this Logger) use it
+	// to declare the one frame they add, so source resolution points at the real
+	// call site rather than at the wrapper — with no stack scanning or heuristic.
+	// Skips accumulate across layers; negative arguments are clamped to zero.
+	WithCallerSkip(skip int) Logger
+
 	// Enabled reports whether the Logger will emit at the given level.
 	// Implementations may use this to short-circuit expensive arg construction.
 	Enabled(ctx context.Context, level slog.Level) bool

@@ -13,11 +13,23 @@ package logger
 import (
 	"context"
 	"log/slog"
+	"runtime"
+	"time"
 )
+
+// callerSkipBase is the number of frames between runtime.Callers (called inside
+// log) and the caller of the exported Debug/Info/Warn/Error method, for a
+// Logger used directly: [runtime.Callers, log, Debug/Info/Warn/Error]. A
+// slogLogger's own skip is added to this to account for transparent wrapper
+// layers above it (see WithCallerSkip). runtime.Callers counts logical frames,
+// so this stays correct under inlining — the same reason stdlib slog's own
+// fixed skip works.
+const callerSkipBase = 3
 
 type slogLogger struct {
 	inner      *slog.Logger
 	extractors []ContextExtractor
+	skip       int // additional frames contributed by wrapper layers above this one
 }
 
 // NewSlog returns a Logger backed by *slog.Logger.
@@ -44,23 +56,60 @@ func NewSlogFromLogger(l *slog.Logger, extractors ...ContextExtractor) Logger {
 }
 
 func (s *slogLogger) Debug(ctx context.Context, msg string, args ...any) {
-	s.inner.DebugContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.log(ctx, slog.LevelDebug, msg, args...)
 }
 
 func (s *slogLogger) Info(ctx context.Context, msg string, args ...any) {
-	s.inner.InfoContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.log(ctx, slog.LevelInfo, msg, args...)
 }
 
 func (s *slogLogger) Warn(ctx context.Context, msg string, args ...any) {
-	s.inner.WarnContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.log(ctx, slog.LevelWarn, msg, args...)
 }
 
 func (s *slogLogger) Error(ctx context.Context, msg string, args ...any) {
-	s.inner.ErrorContext(ctx, msg, s.applyExtractors(ctx, args)...)
+	s.log(ctx, slog.LevelError, msg, args...)
+}
+
+// log builds and dispatches the record with a source location that points at
+// the real call site rather than at this wrapper file.
+//
+// The standard library's Logger.log captures the caller PC with a fixed frame
+// skip that assumes it is invoked directly, so records reached through this
+// wrapper — and through any transparent adapter above it — would be attributed
+// to the wrapper. We capture the PC ourselves with an equivalent fixed skip
+// plus s.skip, the frame count declared by wrapper layers via WithCallerSkip.
+// This is a single-PC capture (no stack scan, no symbolication) and is robust
+// to inlining because runtime.Callers counts logical frames.
+func (s *slogLogger) log(ctx context.Context, level slog.Level, msg string, args ...any) {
+	// Evaluate extractors first, unconditionally and with the caller's context
+	// as-is, matching the prior argument-evaluation order and the "every log
+	// call" extractor contract (side-effecting extractors must still run).
+	merged := s.applyExtractors(ctx, args)
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	if !s.inner.Enabled(ctx, level) {
+		return
+	}
+	var pcs [1]uintptr
+	runtime.Callers(callerSkipBase+s.skip, pcs[:])
+	r := slog.NewRecord(time.Now(), level, msg, pcs[0])
+	r.Add(merged...)
+	_ = s.inner.Handler().Handle(ctx, r)
 }
 
 func (s *slogLogger) With(args ...any) Logger {
-	return &slogLogger{inner: s.inner.With(args...), extractors: s.extractors}
+	return &slogLogger{inner: s.inner.With(args...), extractors: s.extractors, skip: s.skip}
+}
+
+// WithCallerSkip returns a child that adds skip frames to source resolution.
+// Negative arguments are clamped to zero; skips accumulate across layers.
+func (s *slogLogger) WithCallerSkip(skip int) Logger {
+	if skip < 0 {
+		skip = 0
+	}
+	return &slogLogger{inner: s.inner, extractors: s.extractors, skip: s.skip + skip}
 }
 
 func (s *slogLogger) Enabled(ctx context.Context, level slog.Level) bool {

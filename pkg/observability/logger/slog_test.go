@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"log/slog"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -75,6 +76,83 @@ func TestSlogLoggerAppliesContextExtractors(t *testing.T) {
 	}
 	if !strings.Contains(s, `"tenant_id":"t1"`) {
 		t.Fatalf("missing tenant_id: %s", s)
+	}
+}
+
+func recordSource(t *testing.T, buf *bytes.Buffer) (file, function string, line int) {
+	t.Helper()
+	var rec struct {
+		Source struct {
+			File     string `json:"file"`
+			Line     int    `json:"line"`
+			Function string `json:"function"`
+		} `json:"source"`
+	}
+	if err := json.Unmarshal(bytes.TrimSpace(buf.Bytes()), &rec); err != nil {
+		t.Fatalf("unmarshal: %v; buf=%q", err, buf.String())
+	}
+	return rec.Source.File, rec.Source.Function, rec.Source.Line
+}
+
+func TestSlogLoggerRecordsCallerAsSource(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	l := logger.NewSlog(slog.NewJSONHandler(&buf, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}))
+	_, _, wantLine, _ := runtime.Caller(0)
+	l.Warn(context.Background(), "boom") // must resolve to THIS line (wantLine+1)
+
+	file, function, line := recordSource(t, &buf)
+	if !strings.HasSuffix(file, "slog_test.go") || line != wantLine+1 {
+		t.Fatalf("source = %s:%d, want this test at slog_test.go:%d (not the wrapper)", file, line, wantLine+1)
+	}
+	if !strings.HasSuffix(function, ".TestSlogLoggerRecordsCallerAsSource") {
+		t.Fatalf("source function = %q, want the test function", function)
+	}
+}
+
+// TestSlogLoggerSkipsWrapperLayers is the real regression for the flagship bug:
+// the logger is reached through transparent adapter layers (backend-kit's
+// shared.Logger bridge in production), each adding a call frame and declaring it
+// via WithCallerSkip(1). Source must resolve past ALL of them to the true call
+// site, proving the fix composes across wrapper depth.
+func TestSlogLoggerSkipsWrapperLayers(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	base := logger.NewSlog(slog.NewJSONHandler(&buf, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}))
+	// Two stacked forwarders, mirroring caller -> shared.Logger -> pk-core.
+	wrapped := logger.NewForwardingLogger(logger.NewForwardingLogger(base))
+	_, _, wantLine, _ := runtime.Caller(0)
+	wrapped.Warn(context.Background(), "boom") // must STILL resolve here (wantLine+1)
+
+	file, function, line := recordSource(t, &buf)
+	if !strings.HasSuffix(file, "slog_test.go") || line != wantLine+1 {
+		t.Fatalf("source = %s:%d, want slog_test.go:%d; wrapper layers not skipped", file, line, wantLine+1)
+	}
+	if !strings.HasSuffix(function, ".TestSlogLoggerSkipsWrapperLayers") {
+		t.Fatalf("source function = %q, want the test function", function)
+	}
+}
+
+// TestWithCallerSkipShiftsAttribution pins the primitive: each WithCallerSkip(1)
+// moves attribution up exactly one frame. A logger skipped by one, called
+// directly, attributes to this function's own caller rather than to this line.
+func TestWithCallerSkipShiftsAttribution(t *testing.T) {
+	t.Parallel()
+	var buf bytes.Buffer
+	base := logger.NewSlog(slog.NewJSONHandler(&buf, &slog.HandlerOptions{AddSource: true, Level: slog.LevelDebug}))
+
+	// Helper that logs through a skip-1 logger; with the extra skip, the record
+	// is attributed to emit's caller (this test), not to emit itself.
+	emit := func(l logger.Logger) { l.WithCallerSkip(1).Warn(context.Background(), "x") }
+	_, _, wantLine, _ := runtime.Caller(0)
+	emit(base) // attribution target: wantLine+1
+
+	file, function, line := recordSource(t, &buf)
+	if !strings.HasSuffix(file, "slog_test.go") || line != wantLine+1 {
+		t.Fatalf("source = %s:%d, want the emit() call site slog_test.go:%d", file, line, wantLine+1)
+	}
+	if !strings.HasSuffix(function, ".TestWithCallerSkipShiftsAttribution") {
+		t.Fatalf("source function = %q, want the outer test function (skip applied)", function)
 	}
 }
 
