@@ -20,6 +20,7 @@ import (
 	"net/http"
 
 	"github.com/septagon-oss/pk-core/pkg/infrastructure/router"
+	"github.com/septagon-oss/pk-shared/pkg/apiwire"
 )
 
 // Store is the persistence contract for entities of type T. CRUD
@@ -39,8 +40,10 @@ type Store[T any] interface {
 }
 
 // ListFilter is the canonical query shape passed to Store.List. The
-// default parser populates it from URL query string keys (limit,
-// offset, sort, desc, q); a custom ListFilterParser may override that.
+// default parser populates it via the shared wire vocabulary
+// (pk-shared/pkg/apiwire): canonical keys page/page_size/offset/sort/
+// order/search plus the legacy aliases limit/desc/q. A custom
+// ListFilterParser may override that.
 type ListFilter struct {
 	Limit    int
 	Offset   int
@@ -139,7 +142,8 @@ func (h *Handler[T]) Mount(r router.Router, basePath string) {
 	r.Method(http.MethodDelete, basePath+"/{id}", h.deleteHandler)
 }
 
-// listHandler implements GET {basePath}.
+// listHandler implements GET {basePath}. The page of entities travels in
+// the shared list envelope (REQ-021): {"data":[...],"metadata":{...}}.
 func (h *Handler[T]) listHandler(w http.ResponseWriter, r *http.Request) {
 	filter := h.opts.ListFilterParser(r)
 	entities, err := h.store.List(r.Context(), filter)
@@ -150,7 +154,11 @@ func (h *Handler[T]) listHandler(w http.ResponseWriter, r *http.Request) {
 	if entities == nil {
 		entities = []*T{}
 	}
-	writeJSON(w, http.StatusOK, entities)
+	meta := &apiwire.ListMetadata{Page: 1, PageSize: filter.Limit}
+	if filter.Limit > 0 {
+		meta.Page = filter.Offset/filter.Limit + 1
+	}
+	writeJSON(w, http.StatusOK, apiwire.List[*T]{Data: entities, Metadata: meta})
 }
 
 // createHandler implements POST {basePath}.
@@ -174,7 +182,7 @@ func (h *Handler[T]) createHandler(w http.ResponseWriter, r *http.Request) {
 	if h.opts.AfterCreate != nil {
 		h.opts.AfterCreate(ctx, entity)
 	}
-	writeJSON(w, http.StatusCreated, entity)
+	writeJSON(w, http.StatusCreated, apiwire.Item[*T]{Data: entity})
 }
 
 // getHandler implements GET {basePath}/{id}.
@@ -185,7 +193,7 @@ func (h *Handler[T]) getHandler(w http.ResponseWriter, r *http.Request) {
 		h.opts.ErrorRenderer(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, entity)
+	writeJSON(w, http.StatusOK, apiwire.Item[*T]{Data: entity})
 }
 
 // updateHandler implements PUT {basePath}/{id}.
@@ -210,7 +218,7 @@ func (h *Handler[T]) updateHandler(w http.ResponseWriter, r *http.Request) {
 	if h.opts.AfterUpdate != nil {
 		h.opts.AfterUpdate(ctx, id, entity)
 	}
-	writeJSON(w, http.StatusOK, entity)
+	writeJSON(w, http.StatusOK, apiwire.Item[*T]{Data: entity})
 }
 
 // deleteHandler implements DELETE {basePath}/{id}.

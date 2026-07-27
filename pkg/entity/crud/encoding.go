@@ -19,7 +19,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strconv"
+
+	"github.com/septagon-oss/pk-shared/pkg/apiwire"
+	"github.com/septagon-oss/problem"
 )
 
 // jsonContentType is the response Content-Type for every JSON body the
@@ -73,24 +75,18 @@ func defaultIDExtractor(r *http.Request) string {
 	return r.PathValue("id")
 }
 
-// defaultListFilterParser pulls limit/offset/sort/desc/q from the URL
-// query string. Invalid integers fall back to zero; absent keys leave
-// the corresponding field at its zero value.
+// defaultListFilterParser normalizes the query string through the shared
+// wire vocabulary (REQ-021): canonical page/page_size/offset/sort/order/
+// search plus the legacy limit/desc/q aliases. Invalid integers fall back
+// to zero; absent keys leave the corresponding field at its zero value.
 func defaultListFilterParser(r *http.Request) ListFilter {
-	q := r.URL.Query()
-	limit, _ := strconv.Atoi(q.Get("limit"))
-	offset, _ := strconv.Atoi(q.Get("offset"))
-	desc := false
-	switch q.Get("desc") {
-	case "1", "true", "TRUE", "True":
-		desc = true
-	}
+	q := apiwire.ParseListQuery(r.URL.Query())
 	return ListFilter{
-		Limit:    limit,
-		Offset:   offset,
-		SortBy:   q.Get("sort"),
-		SortDesc: desc,
-		Q:        q.Get("q"),
+		Limit:    q.EffectiveLimit(),
+		Offset:   q.EffectiveOffset(),
+		SortBy:   q.Sort,
+		SortDesc: q.Desc,
+		Q:        q.Search,
 	}
 }
 
@@ -110,16 +106,12 @@ func defaultErrorRenderer(w http.ResponseWriter, err error) {
 	}
 }
 
-// writeError emits a minimal JSON error envelope. It is intentionally
-// schema-light so callers can override ErrorRenderer to richer shapes
-// without fighting a wide default.
+// writeError emits an RFC 7807 problem document through
+// septagon-oss/problem — the single error contract shared across the
+// PlatformKit family, so a client classifies failures the same way against
+// every server. Callers can still override ErrorRenderer for richer shapes.
 func writeError(w http.ResponseWriter, status int, msg string) {
-	w.Header().Set("Content-Type", jsonContentType)
-	w.WriteHeader(status)
-	body := struct {
-		Error string `json:"error"`
-	}{Error: msg}
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	_ = enc.Encode(body)
+	// ErrorRenderer carries no *http.Request, so the optional "instance"
+	// member is omitted; WriteHTTP accepts a nil request for exactly this.
+	_ = problem.WriteHTTP(w, nil, status, msg)
 }

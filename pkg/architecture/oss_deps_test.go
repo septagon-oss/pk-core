@@ -13,13 +13,15 @@ package architecture_test
 //
 // Anything else is a v0.1.0 contract violation. The whitelist exists because a
 // handful of cryptographic and crypto-adjacent operations (bcrypt, argon2id)
-// cannot be implemented from stdlib alone, and `golang.org/x/crypto` is the
-// Go-team-maintained, security-audited canonical source.
+// cannot be implemented from stdlib alone, and because canonical
+// dependency-graph leaves such as pk-shared and problem own wire contracts
+// that must not be reimplemented inside pk-core.
 //
 // To add an entry: extend AllowedExternalDeps with the import path and a
-// one-line comment documenting WHY pk-core needs it. The bar is "this cannot
-// be reasonably implemented from stdlib AND is widely vendored in the Go
-// ecosystem AND is maintained by a trusted upstream."
+// one-line comment documenting WHY pk-core needs it. Third-party entries must
+// be trusted, well-maintained building blocks that cannot reasonably be
+// implemented from stdlib. First-party OSS entries must be lower-level
+// canonical contract owners; private septagon-dev modules remain forbidden.
 //
 // ADR: ADR-0029 (file purpose declaration).
 // Convention: C-14 (every Go file declares its purpose).
@@ -33,8 +35,10 @@ import (
 // AllowedExternalDeps enumerates the import paths pk-core packages may use
 // outside the standard library. Keys are exact package paths.
 var AllowedExternalDeps = map[string]string{
-	"golang.org/x/crypto/bcrypt": "bcrypt password hashing; cannot be implemented from stdlib alone; Go-team maintained",
-	"golang.org/x/crypto/argon2": "argon2id password hashing; cannot be implemented from stdlib alone; Go-team maintained",
+	"github.com/septagon-oss/pk-shared/pkg/apiwire": "canonical provider-neutral API query and response-envelope vocabulary",
+	"github.com/septagon-oss/problem":               "canonical RFC 9457 error contract; avoids a parallel pk-core error shape",
+	"golang.org/x/crypto/bcrypt":                    "bcrypt password hashing; cannot be implemented from stdlib alone; Go-team maintained",
+	"golang.org/x/crypto/argon2":                    "argon2id password hashing; cannot be implemented from stdlib alone; Go-team maintained",
 }
 
 // pkCorePackages lists every public pkg/ leaf in pk-core. Tests that walk

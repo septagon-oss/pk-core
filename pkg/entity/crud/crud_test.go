@@ -29,6 +29,7 @@ import (
 
 	"github.com/septagon-oss/pk-core/pkg/entity/crud"
 	"github.com/septagon-oss/pk-core/pkg/infrastructure/router"
+	"github.com/septagon-oss/pk-shared/pkg/apiwire"
 )
 
 // Widget is the test entity. ID + Name are enough to exercise the
@@ -180,9 +181,9 @@ func TestCreatePOSTReturns201(t *testing.T) {
 	if resp.StatusCode != http.StatusCreated {
 		t.Fatalf("status = %d, want 201", resp.StatusCode)
 	}
-	got := decodeBody[Widget](t, resp)
-	if got.ID != "w1" || got.Name != "Gear" {
-		t.Errorf("body = %+v, want {w1 Gear}", got)
+	got := decodeBody[apiwire.Item[Widget]](t, resp)
+	if got.Data.ID != "w1" || got.Data.Name != "Gear" {
+		t.Errorf("body = %+v, want data {w1 Gear}", got)
 	}
 	if _, err := store.Get(context.Background(), "w1"); err != nil {
 		t.Errorf("store missing w1 after create: %v", err)
@@ -254,9 +255,9 @@ func TestGetExistingReturns200(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
-	got := decodeBody[Widget](t, resp)
-	if got.Name != "Alpha" {
-		t.Errorf("name = %q, want Alpha", got.Name)
+	got := decodeBody[apiwire.Item[Widget]](t, resp)
+	if got.Data.Name != "Alpha" {
+		t.Errorf("name = %q, want Alpha", got.Data.Name)
 	}
 }
 
@@ -284,9 +285,9 @@ func TestListReturnsAllEntities(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
-	got := decodeBody[[]Widget](t, resp)
-	if len(got) != 3 {
-		t.Errorf("len = %d, want 3", len(got))
+	got := decodeBody[apiwire.List[Widget]](t, resp)
+	if len(got.Data) != 3 {
+		t.Errorf("len = %d, want 3", len(got.Data))
 	}
 }
 
@@ -299,12 +300,33 @@ func TestListWithLimitOffset(t *testing.T) {
 	srv := newServer(t, store)
 
 	resp := doJSON(t, srv, http.MethodGet, "/widgets?limit=2&offset=1", nil)
-	got := decodeBody[[]Widget](t, resp)
-	if len(got) != 2 {
-		t.Fatalf("len = %d, want 2", len(got))
+	got := decodeBody[apiwire.List[Widget]](t, resp)
+	if len(got.Data) != 2 {
+		t.Fatalf("len = %d, want 2", len(got.Data))
 	}
-	if got[0].ID != "b" || got[1].ID != "c" {
-		t.Errorf("ids = %s,%s, want b,c", got[0].ID, got[1].ID)
+	if got.Data[0].ID != "b" || got.Data[1].ID != "c" {
+		t.Errorf("ids = %s,%s, want b,c", got.Data[0].ID, got.Data[1].ID)
+	}
+}
+
+func TestListWithCanonicalPageParams(t *testing.T) {
+	t.Parallel()
+	store := newWidgetStore()
+	for _, id := range []string{"a", "b", "c", "d", "e"} {
+		_ = store.Create(context.Background(), &Widget{ID: id, Name: id})
+	}
+	srv := newServer(t, store)
+
+	resp := doJSON(t, srv, http.MethodGet, "/widgets?page=2&page_size=2", nil)
+	got := decodeBody[apiwire.List[Widget]](t, resp)
+	if len(got.Data) != 2 {
+		t.Fatalf("len = %d, want 2", len(got.Data))
+	}
+	if got.Data[0].ID != "c" || got.Data[1].ID != "d" {
+		t.Errorf("ids = %s,%s, want c,d", got.Data[0].ID, got.Data[1].ID)
+	}
+	if got.Metadata == nil || got.Metadata.Page != 2 || got.Metadata.PageSize != 2 {
+		t.Errorf("metadata = %+v, want page 2 size 2", got.Metadata)
 	}
 }
 
@@ -320,8 +342,9 @@ func TestListEmptyReturnsJSONArray(t *testing.T) {
 	}
 	b, _ := io.ReadAll(resp.Body)
 	body := strings.TrimSpace(string(b))
-	if body != "[]" {
-		t.Errorf("body = %q, want []", body)
+	// data must be [] (never null) so clients can range over it unconditionally.
+	if !strings.Contains(body, `"data":[]`) {
+		t.Errorf("body = %q, want a %q list envelope", body, `"data":[]`)
 	}
 }
 
@@ -439,9 +462,9 @@ func TestCustomIDExtractor(t *testing.T) {
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("status = %d, want 200", resp.StatusCode)
 	}
-	got := decodeBody[Widget](t, resp)
-	if got.ID != "from-header" {
-		t.Errorf("id = %q, want from-header", got.ID)
+	got := decodeBody[apiwire.Item[Widget]](t, resp)
+	if got.Data.ID != "from-header" {
+		t.Errorf("id = %q, want from-header", got.Data.ID)
 	}
 }
 
@@ -478,6 +501,14 @@ func TestDefaultListFilterParserParsesQuery(t *testing.T) {
 	got := store.lastLF
 	if got.Limit != 5 || got.Offset != 2 || got.SortBy != "name" || !got.SortDesc || got.Q != "hello" {
 		t.Errorf("filter = %+v, want {Limit:5 Offset:2 SortBy:name SortDesc:true Q:hello}", got)
+	}
+
+	// The canonical dialect (REQ-021) must normalize to the same filter shape.
+	resp = doJSON(t, srv, http.MethodGet, "/widgets?page=2&page_size=5&sort=name&order=desc&search=hello", nil)
+	resp.Body.Close()
+	got = store.lastLF
+	if got.Limit != 5 || got.Offset != 5 || got.SortBy != "name" || !got.SortDesc || got.Q != "hello" {
+		t.Errorf("canonical filter = %+v, want {Limit:5 Offset:5 SortBy:name SortDesc:true Q:hello}", got)
 	}
 }
 

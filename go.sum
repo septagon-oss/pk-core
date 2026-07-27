@@ -1,4 +1,8 @@
-golang.org/x/crypto v0.52.0 h1:RMs7fP2rXdep0CftQlK8Uf+kibLm7qkCcradZWYz988=
-golang.org/x/crypto v0.52.0/go.mod h1:1QgfPxDqh0T2M/elOJtp9RvuR95kVjir0e6/BvEmGbc=
-golang.org/x/sys v0.45.0 h1:dO4czNzziLiiXplLQgBCEpCvXQ3dnkn0SdaZSYdQ+FY=
-golang.org/x/sys v0.45.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
+github.com/septagon-oss/pk-shared v0.5.0 h1:zeqp9fM4IYIPshmUbc9J3lJhwEjqOkqxUoliYdrvFpU=
+github.com/septagon-oss/pk-shared v0.5.0/go.mod h1:R/AxKJlhfg4Knsy47nhHeikeKfHAKOdJ5M+8hLgCTXU=
+github.com/septagon-oss/problem v0.1.1 h1:OgpUboVsatmqnhBL6L8iys8Z+h8UxdBD5vm41/M6ids=
+github.com/septagon-oss/problem v0.1.1/go.mod h1:dIcZD936cXCtC8Ffq+G+QnA+7qY/4sRDLsYEPFVKMZM=
+golang.org/x/crypto v0.54.0 h1:YLIA59K4fiNzHzjnZt2tUJQjQtUWfWbeHBqKtk3eScw=
+golang.org/x/crypto v0.54.0/go.mod h1:KWL8ny2AZdGR2cWmzeHrp2azQPGogOv+HeQaVEXC2dk=
+golang.org/x/sys v0.47.0 h1:o7XGOvZQCADBQQ4Y7VNq2dRWQR7JmOUW8Kxx4ZsNgWs=
+golang.org/x/sys v0.47.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
